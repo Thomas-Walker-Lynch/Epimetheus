@@ -1,0 +1,28 @@
+* Epimetheus
+/The God of Afterthought/
+
+Epimetheus is a Python library for **Higher Order Analysis** and **Semantic Annotation**.
+
+Unlike Prometheus (Forethought), who defines what an object /is/ before it is born (classic class instantiation), Epimetheus allows you to attach meaning, identity, and semantic types to objects /after/ they exist.
+
+It is a mechanism for "Late Binding" of ontology.
+
+** Concept
+Most type systems are embedded in the object's definition (the Class). Epimetheus treats the object as a point in space and allows an external observer (the library) to weave a "constellation" of properties and relationships around it.
+
+This enables:
+- **Semantic Typing:** Tagging objects with properties ($color$, $spin$, $is_valid$) without altering the object's code.
+- **Higher Order Analysis:** defining relationships between objects (constellations) rather than just properties of objects.
+- **Non-Invasive Instrumentation:** Annotating third-party objects or C-extensions that cannot be subclassed.
+
+** Etymology
+Named after the Greek Titan *Epimetheus* (Afterthought). While his brother Prometheus is associated with architectural planning, Epimetheus is the patron of patching, extending, and adapting the world as it is found.
+
+** Status
+- **Author:** Thomas Walker Lynch
+- **Version:** Pre-Alpha
+
+#+BEGIN_QUOTE
+"Zero length is a second order concept."
+-- T.W. Lynch, *TTCA*
+#+END_QUOTE
