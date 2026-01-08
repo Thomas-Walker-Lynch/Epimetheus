@@ -1,0 +1,280 @@
+#!/usr/bin/env python3
+# -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
+
+"""
+git-tar — Create an archive of the current Git repo's ref into ./scratchpad
+
+Commands (order-insensitive):
+  git-tar                         # default: tar.gz (HEAD, ./scratchpad, Z-stamp if importable)
+  git-tar help                    # show help
+  git-tar version                 # show version
+  git-tar ref-<REF>               # choose ref (tag/branch/commit), default HEAD
+  git-tar out-<OUTDIR>            # choose output directory (default: <repo>/scratchpad)
+  git-tar no-stamp                # force omit timestamp even if Z is importable
+  git-tar z-format-<FMT>          # override timestamp format used with Z (optional)
+  git-tar zip                     # write .zip instead of .tar.gz
+  git-tar tar                     # force .tar.gz explicitly
+
+Output names:
+  <repo>__<ref>[__<Z>].tar.gz
+  <repo>__<ref>[__<Z>].zip
+"""
+
+from __future__ import annotations
+import gzip, os, pathlib, subprocess, sys
+from typing import Optional
+import importlib, importlib.util
+from importlib.machinery import SourceFileLoader
+
+VERSION = "1.5"
+
+# ----------------------------------------------------------------------
+# Editable timestamp format (used when calling Z)
+# ----------------------------------------------------------------------
+Z_FORMAT = "%year-%month-%day_%hour%minute%secondZ"
+
+USAGE = f"""git-tar {VERSION}
+
+Usage:
+  git-tar [commands...]
+
+Commands (order-insensitive):
+  help
+  version
+  ref-<REF>
+  out-<OUTDIR>
+  no-stamp
+  z-format-<FMT>
+  zip
+  tar
+
+Examples:
+  git-tar
+  git-tar zip
+  git-tar ref-main out-/tmp
+  git-tar z-format-%year-%month-%dayT%hour:%minute:%second.%scintillaZ
+""".rstrip()
+
+# ----------------------------------------------------------------------
+# git helpers
+# ----------------------------------------------------------------------
+def _run(*args: str, check: bool = True, cwd: Optional[pathlib.Path] = None) -> subprocess.CompletedProcess[str]:
+  return subprocess.run(
+    args
+    ,check=check
+    ,cwd=(str(cwd) if cwd else None)
+    ,text=True
+    ,stdout=subprocess.PIPE
+    ,stderr=subprocess.PIPE
+  )
+
+def _in_git_repo() -> bool:
+  try:
+    return _run("git","rev-parse","--is-inside-work-tree").stdout.strip().lower() == "true"
+  except subprocess.CalledProcessError:
+    return False
+
+def _git_top() -> pathlib.Path:
+  return pathlib.Path(_run("git","rev-parse","--show-toplevel").stdout.strip())
+
+def _git_ref_label(repo_top: pathlib.Path, ref: str) -> str:
+  try:
+    return _run("git","-C",str(repo_top),"describe","--tags","--always","--dirty",ref).stdout.strip()
+  except subprocess.CalledProcessError:
+    return _run("git","-C",str(repo_top),"rev-parse","--short",ref).stdout.strip()
+
+# ----------------------------------------------------------------------
+# Z module discovery (supports extension-less file named "Z")
+# ----------------------------------------------------------------------
+def _import_Z_module(repo_top: pathlib.Path) -> Optional[object]:
+  try:
+    return importlib.import_module("Z")
+  except Exception:
+    pass
+
+  candidates: list[pathlib.Path] = []
+  here = pathlib.Path(__file__).resolve().parent
+  candidates += [here / "Z", here / "Z.py"]
+  candidates += [
+    repo_top / "shared" / "third_party" / "RT-project-share" / "release" / "python" / "Z",
+    repo_top / "shared" / "third_party" / "RT-project-share" / "release" / "python" / "Z.py",
+    repo_top / "shared" / "third_party" / "RT-project-share" / "release" / "bash" / "Z",
+  ]
+  for d in (pathlib.Path(p) for p in (os.getenv("PATH") or "").split(os.pathsep) if p):
+    p = d / "Z"
+    if p.exists() and p.is_file():
+      candidates.append(p)
+
+  for path in candidates:
+    try:
+      if not path.exists() or not path.is_file():
+        continue
+      spec = importlib.util.spec_from_loader("Z", SourceFileLoader("Z", str(path)))
+      if not spec or not spec.loader:
+        continue
+      mod = importlib.util.module_from_spec(spec)
+      spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+      if hasattr(mod,"make_timestamp") or (hasattr(mod,"get_utc_dict") and hasattr(mod,"format_timestamp")):
+        return mod
+    except Exception:
+      continue
+  return None
+
+# ----------------------------------------------------------------------
+# Z stamp helper (format string visible & editable above)
+# ----------------------------------------------------------------------
+def make_z_stamp(zmod: object, z_format: str) -> Optional[str]:
+  try:
+    if hasattr(zmod, "make_timestamp"):
+      s = zmod.make_timestamp(fmt=z_format)  # type: ignore[attr-defined]
+      return (str(s).strip().replace("\n","") or None)
+    if hasattr(zmod, "get_utc_dict") and hasattr(zmod, "format_timestamp"):
+      td = zmod.get_utc_dict()  # type: ignore[attr-defined]
+      s = zmod.format_timestamp(td, z_format)  # type: ignore[attr-defined]
+      return (str(s).strip().replace("\n","") or None)
+  except Exception:
+    return None
+  return None
+
+# ----------------------------------------------------------------------
+# archiving
+# ----------------------------------------------------------------------
+def _stream_git_archive_tar(repo_top: pathlib.Path, prefix: str, ref: str, out_gz_path: pathlib.Path) -> None:
+  proc = subprocess.Popen(
+    ["git","-C",str(repo_top),"archive","--format=tar",f"--prefix={prefix}/",ref]
+    ,stdout=subprocess.PIPE
+  )
+  try:
+    with gzip.open(out_gz_path,"wb") as gz:
+      while True:
+        chunk = proc.stdout.read(1024 * 1024)  # 1 MiB
+        if not chunk:
+          break
+        gz.write(chunk)
+  finally:
+    if proc.stdout:
+      proc.stdout.close()
+    rc = proc.wait()
+    if rc != 0:
+      try:
+        out_gz_path.unlink(missing_ok=True)
+      finally:
+        raise subprocess.CalledProcessError(rc, proc.args)
+
+def _stream_git_archive_zip(repo_top: pathlib.Path, prefix: str, ref: str, out_zip_path: pathlib.Path) -> None:
+  # Directly stream git's zip to file; no Python zip building needed.
+  proc = subprocess.Popen(
+    ["git","-C",str(repo_top),"archive","--format=zip",f"--prefix={prefix}/",ref]
+    ,stdout=subprocess.PIPE
+  )
+  try:
+    with open(out_zip_path, "wb") as f:
+      while True:
+        chunk = proc.stdout.read(1024 * 1024)
+        if not chunk:
+          break
+        f.write(chunk)
+  finally:
+    if proc.stdout:
+      proc.stdout.close()
+    rc = proc.wait()
+    if rc != 0:
+      try:
+        out_zip_path.unlink(missing_ok=True)
+      finally:
+        raise subprocess.CalledProcessError(rc, proc.args)
+
+# ----------------------------------------------------------------------
+# work function
+# ----------------------------------------------------------------------
+def work(
+  ref: str = "HEAD"
+  ,outdir: Optional[pathlib.Path] = None
+  ,force_no_stamp: bool = False
+  ,z_format: Optional[str] = None
+  ,archive_kind: str = "tar"   # "tar" or "zip"
+) -> pathlib.Path:
+  if archive_kind not in ("tar","zip"):
+    raise RuntimeError("archive_kind must be 'tar' or 'zip'")
+
+  if not _in_git_repo():
+    raise RuntimeError("not inside a git repository")
+
+  repo_top = _git_top()
+  repo_name = repo_top.name
+  ref_label = _git_ref_label(repo_top, ref)
+
+  stamp: Optional[str] = None
+  if not force_no_stamp:
+    zmod = _import_Z_module(repo_top)
+    if zmod is not None:
+      stamp = make_z_stamp(zmod, z_format or Z_FORMAT)
+
+  target_dir = (outdir or (repo_top / "scratchpad"))
+  target_dir.mkdir(parents=True, exist_ok=True)
+
+  suffix = ".zip" if archive_kind == "zip" else ".tar.gz"
+  out_name = f"{repo_name}__{ref_label}{('__' + stamp) if stamp else ''}{suffix}"
+  out_path = target_dir / out_name
+
+  if archive_kind == "zip":
+    _stream_git_archive_zip(repo_top, repo_name, ref, out_path)
+  else:
+    _stream_git_archive_tar(repo_top, repo_name, ref, out_path)
+
+  return out_path
+
+# ----------------------------------------------------------------------
+# CLI with command tokens
+# ----------------------------------------------------------------------
+def CLI(argv: Optional[list[str]] = None) -> int:
+  if argv is None:
+    argv = sys.argv[1:]
+
+  # defaults
+  ref = "HEAD"
+  outdir: Optional[pathlib.Path] = None
+  force_no_stamp = False
+  z_format: Optional[str] = None
+  archive_kind = "tar"
+
+  # no args → do the default action
+  if not argv:
+    try:
+      print(f"Wrote {work(ref=ref, outdir=outdir, force_no_stamp=force_no_stamp, z_format=z_format, archive_kind=archive_kind)}")
+      return 0
+    except Exception as e:
+      print(f"git-tar: {e}", file=sys.stderr); return 1
+
+  # consume tokens (order-insensitive)
+  for arg in argv:
+    if arg in ("help","-h","--help"):
+      print(USAGE); return 0
+    if arg == "version":
+      print(f"git-tar {VERSION}"); return 0
+    if arg == "no-stamp":
+      force_no_stamp = True; continue
+    if arg == "zip":
+      archive_kind = "zip"; continue
+    if arg == "tar":
+      archive_kind = "tar"; continue
+    if arg.startswith("ref-"):
+      ref = arg[4:] or ref; continue
+    if arg.startswith("out-"):
+      od = arg[4:]; outdir = pathlib.Path(od).resolve() if od else None; continue
+    if arg.startswith("z-format-"):
+      z_format = arg[len("z-format-"):] or None; continue
+    print(f"git-tar: unknown command '{arg}'", file=sys.stderr); return 1
+
+  # run
+  try:
+    out_path = work(ref=ref, outdir=outdir, force_no_stamp=force_no_stamp, z_format=z_format, archive_kind=archive_kind)
+  except Exception as e:
+    print(f"git-tar: {e}", file=sys.stderr); return 1
+
+  print(f"Wrote {out_path}")
+  return 0
+
+# ----------------------------------------------------------------------
+if __name__ == "__main__":
+  raise SystemExit(CLI())
