@@ -20,7 +20,7 @@ umask 0077
     dirname "$script_afp"
   }
 
-# assume this script is located  $REPO_HOME/tools_shared/authored and work backwards
+# assume this script is located  $REPO_HOME/shared/authored and work backwards
 # to get $REPO_HOME, etc.
 
   REPO_HOME=$(dirname "$(dirname "$(script_adp)")")
