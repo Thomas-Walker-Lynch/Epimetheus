@@ -24,9 +24,23 @@ window.StyleRT.article_generic = function() {
   // We apply the width to the body now so that getBoundingClientRect() 
   // in the paginator reflects the final text wrapping.
   body.style.maxWidth = '50rem';
-  body.style.margin = '0 auto'; // Center the content area
+  body.style.margin = '0 auto'; 
   
-  // We store the target page height on the RT object for the paginator to find.
-  // This avoids assigning a height to the body itself (which would clip content).
+  // 4. Centered Headers
+  // We apply this via a quick style injection or direct selection
+  const h1s = document.querySelectorAll('h1');
+  h1s.forEach(h => {
+    h.style.textAlign = 'center';
+    h.style.width = '100%';
+  });
+
+  // 5. Layout Variables
+  // We store the target page height for the paginator to find.
   RT.page_height = 1056; 
+
+  // Typographic constraints for future line-splitting logic
+  RT.orphans = 4;
+  RT.widows = 4;
+  
+  if (RT.debug) RT.debug.log('style', 'Article generic setup: H1 centered, orphans/widows set to 4.');
 };

@@ -17,7 +17,8 @@ window.StyleRT.do_style = function() {
     'style/RT_TOC.js',          
     'style/paginate_by_element.js', 
     //    'style/page.js',
-    'style/page_css.js',            
+    //    'style/page_css.js',            
+    'style/page_css_pn.js',            
     'style/body_visibility_visible.js' 
   ];
 
