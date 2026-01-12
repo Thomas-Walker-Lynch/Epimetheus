@@ -1,40 +1,49 @@
 /*
-  Defines the appearance of a "Page" container.
-  Restores the Original "Gold Glow" Scheme.
+  Defines the appearance of the <RT-PAGE> container via a CSS block.
+  Uses high-contrast offsets to ensure the drop shadow is visible.
 */
 window.StyleRT = window.StyleRT || {};
 
 window.StyleRT.page = function() {
   const RT = window.StyleRT;
+  const style_id = 'rt-page-styles';
   
-  // Fetch Theme
-  const theme = RT.active_theme ? RT.active_theme() : {};
-  // Use the bright accent for the glow
-  const glowColor = theme.accent || 'gold'; 
+  if (!document.getElementById(style_id)) {
+    const style_el = document.createElement('style');
+    style_el.id = style_id;
+    style_el.textContent = `
+      html, body {
+        background-color: #1a1a1a !important; 
+        margin: 0;
+        padding: 0;
+      }
 
-  document.querySelectorAll('.page').forEach(el => {
-    // A. Dimensions (The "Web" Look)
-    el.style.width = '1200px'; 
-    el.style.maxWidth = '95vw'; // Responsive safety
-    el.style.height = 'auto';   // Hug content
-    el.style.minHeight = '200px'; // Minimum sanity check
-    el.style.boxSizing = 'border-box';
-    
-    // B. The "Original" Visuals
-    // 1. Background: Likely darker/transparent to let the theme breathe
-    el.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; 
-    
-    // 2. Border: Thin accent line
-    el.style.border = `1px solid ${glowColor}`;
-    
-    // 3. Shadow: The "Gold Drop Shadow" you missed
-    // Format: offset-x | offset-y | blur-radius | color
-    el.style.boxShadow = `0 0 15px ${glowColor}`; 
-    
-    el.style.margin = '0 auto'; 
-    
-    // C. Typography Base
-    el.style.padding = '2rem 4rem'; // Standard comfortable web reading padding
-    el.style.lineHeight = '1.6';
-  });
+      rt-page {
+        display: block;
+        max-width: 50rem;
+        width: 100%;
+        
+        /* Increased vertical margin to prevent shadow clipping */
+        margin: 4rem auto 6rem auto; 
+        padding: 3rem;
+        box-sizing: border-box;
+        background-color: hsl(0, 0%, 0%);
+        border: 1px solid hsl(42, 100%, 50%);
+        
+        /* 1. The Offset Drop Shadow (Bottom-Right)
+           2. The Ambient Glow (Centered)
+        */
+        box-shadow: 15px 15px 30px rgba(0, 0, 0, 0.9), 
+                    0 0 15px hsl(42, 100%, 15%);
+        
+        height: auto;
+        
+        /* Ensure the shadow isn't cut off by the container's edges */
+        overflow: visible; 
+      }
+    `;
+    document.head.appendChild(style_el);
+  }
+
+  if (RT.debug) RT.debug.log('style', 'CSS block updated with 15px shadow offset.');
 };

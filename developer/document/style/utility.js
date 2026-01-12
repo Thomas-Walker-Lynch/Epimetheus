@@ -10,8 +10,8 @@ window.StyleRT = window.StyleRT || {};
 
 // --- DEBUG SYSTEM ---
 window.StyleRT.debug = {
-  // Add tokens here to enable specific logs: 'RT_code', 'physics', 'pipeline', 'layout'
-  active_tokens: new Set(['pipeline', 'layout']),
+  // Add tokens here to enable specific logs: 'RT_code', 'layout', 'style', 'layout'
+  active_tokens: new Set(['style', 'layout']),
 
   log: function(token, message) {
     if (this.active_tokens.has(token)) {
@@ -36,7 +36,7 @@ window.StyleRT.utility = {
   // --- FONT PHYSICS ---
   measure_ink_ratio: function(target_font, ref_font = null) {
     const debug = window.StyleRT.debug;
-    debug.log('physics', `Measuring ink ratio for ${target_font}`);
+    debug.log('layout', `Measuring ink ratio for ${target_font}`);
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -59,7 +59,7 @@ window.StyleRT.utility = {
     const target_m = get_metrics(target_font);
     
     const ratio = ref_m.ascent / target_m.ascent;
-    debug.log('physics', `Ink Ratio calculated: ${ratio.toFixed(3)}`);
+    debug.log('layout', `Ink Ratio calculated: ${ratio.toFixed(3)}`);
 
     return { 
       ratio: ratio,
@@ -77,7 +77,7 @@ window.StyleRT.utility = {
       if (numbers && numbers.length >= 3) {
         const lightness = parseInt(numbers[2]);
         const is_light = lightness > 50;
-        debug.log('color_physics', `HSL ${color_string} -> Lightness ${lightness}% -> ${is_light ? 'LIGHT' : 'DARK'}`);
+        debug.log('color_layout', `HSL ${color_string} -> Lightness ${lightness}% -> ${is_light ? 'LIGHT' : 'DARK'}`);
         return is_light;
       }
     }
@@ -85,7 +85,7 @@ window.StyleRT.utility = {
     // 2. RGB Check
     const rgb = color_string.match(/\d+/g);
     if (!rgb) {
-      debug.warn('color_physics', `Failed to parse color: "${color_string}". Defaulting to Light.`);
+      debug.warn('color_layout', `Failed to parse color: "${color_string}". Defaulting to Light.`);
       return true; 
     }
 
@@ -95,7 +95,7 @@ window.StyleRT.utility = {
     const luma = (r * 299 + g * 587 + b * 114) / 1000;
     const is_light = luma > 128;
     
-    debug.log('color_physics', `RGB (${r},${g},${b}) -> Luma ${luma.toFixed(1)} -> ${is_light ? 'LIGHT' : 'DARK'}`);
+    debug.log('color_layout', `RGB (${r},${g},${b}) -> Luma ${luma.toFixed(1)} -> ${is_light ? 'LIGHT' : 'DARK'}`);
     return is_light;
   },
 

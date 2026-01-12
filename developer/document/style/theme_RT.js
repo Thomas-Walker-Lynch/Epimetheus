@@ -1,5 +1,5 @@
 /*
-  Provides the color palette for the RT theme.
+  Provides the color palette and layout layout for the RT theme.
   Registers itself as the active system theme upon load.
 */
 function theme_RT(){
@@ -11,7 +11,7 @@ function theme_RT(){
     foreground: 'hsl(42, 100%, 80%)',
     accent: 'hsl(42, 100%, 50%)',
     faded: 'hsl(42, 100%, 20%)',
-    highlight: 'hsl(42, 100%, 90%)'
+    highlight: 'hsl(42, 100%, 90%)',
   };
 }
 

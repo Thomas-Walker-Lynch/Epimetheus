@@ -1,6 +1,6 @@
 /*
-  Sets basic document theme colors.
-  No layout enforcement (leaves flow to default HTML block behavior).
+  Sets basic document theme colors and dimensions.
+  Sets width immediately so layout-based pagination is accurate.
 */
 window.StyleRT = window.StyleRT || {};
 
@@ -10,12 +10,23 @@ window.StyleRT.article_generic = function() {
 
   const body = document.body;
   
-  // Basic Theme Colors (Required for RT_code physics)
-  body.style.backgroundColor = theme.background || '#000';
-  body.style.color = theme.foreground || '#ddd';
+  // 1. Basic Theme Colors
+  body.style.backgroundColor = theme.background || 'hsl(0, 0%, 0%)';
+  body.style.color = theme.foreground || 'hsl(42, 100%, 80%)';
   body.style.fontFamily = '"Noto Sans JP", sans-serif';
   
-  // Reset margins to prevent browser defaults from interfering with your page.js
+  // 2. Global Flow Reset
+  body.style.display = 'block'; 
   body.style.margin = '0';
   body.style.padding = '0';
+
+  // 3. Dimensions
+  // We apply the width to the body now so that getBoundingClientRect() 
+  // in the paginator reflects the final text wrapping.
+  body.style.maxWidth = '50rem';
+  body.style.margin = '0 auto'; // Center the content area
+  
+  // We store the target page height on the RT object for the paginator to find.
+  // This avoids assigning a height to the body itself (which would clip content).
+  RT.page_height = 1056; 
 };
