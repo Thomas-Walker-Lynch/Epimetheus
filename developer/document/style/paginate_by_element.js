@@ -8,7 +8,7 @@ window.StyleRT = window.StyleRT || {};
 window.StyleRT.paginate_by_element = function() {
   const RT = window.StyleRT;
   const body = document.body;
-  const limit = RT.page_height || 1000; 
+  const limit = RT.layout.page_height || 1000; 
 
   const elements = Array.from(body.children).filter(el => 
     el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE' && el.tagName !== 'RT-PAGE'
