@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Epimetheus: Tagged Math Paradigm</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+  
+  <script src="style/body_visibility_hidden.js"></script>
+  <script>
+    window.StyleRT.body_visibility_hidden();
+  </script>
+</head>
+<body>
+
+  <h1>Given</h1>
+
+  The English language is a given, apparently. 
+
+  This discussion happens to appear in the context of a Python language implementation, though it applies equally as well to other languages. 
+
+  <h1>Symbol</h1>
+
+  <h2>Definition</h2>
+
+  We have a symbol instance factory. Each time the `make` method on the factory is called, the factory returns an instance of a distinct symbol.
+
+  A symbol instance may be copied as through it were an integer. Thus, a common method for making a copy is assignment, e.g. 'x = y', where y is a variable holding a symbol instance, and after execution of the assignment, x will hold another instance of the symbol.
+
+  Any two, or by transitivity, any number of, symbol instances can be compared for equality using an integer equality comparison, e.g. 'x == y'. A comparison between symbol holding variables will always return `True`  or `False`.
+
+  It follows that any two symbol instances directly returned from the factory will always equality compare to be `False`.
+
+  An equivalence set of symbol instances is a functional representation of the symbol. The name of this set is yet another instance of said symbol. Thus ever instance of the symbol represents the symbol.
+
+  Though symbol instances are integer like for copy and equality compare, they are disallowed from being used with other integer operators.  As examples, symbols can not be compared for greater-than or less-than, they can not be incremented, nor added, nor subtracted, etc.
+
+  The only allowed operators for symbol instances are integer equality compare, integer not-equal compare, and integer copy.
+
+  <h2>Distinctness Across Contexts</h2>
+
+  If a symbol persist across contexts, such as across scopes, or  across processes, it must remain distinct from all other symbols as it enters into those new processes or contexts.
+
+  There are many possible schemes or constraint sets for meeting this requirement.
+
+  In this implementation we meet this constraint by using a global symbol factory, and by explicitly disallowing a symbol from being used outside the process it was made in. 
+
+  <h2>Named Symbols</h2>
+
+  It is common for a programmer to make a dictionary that has one-to-one association of a symbol and a Python string object, i.e. a `string`, as programmers like to be able to refer to each symbol by its 'name'.
+
+  <h1>Object</h1>
+
+  <h2>Definition</h2>
+
+  The term 'Python object' is anything that can appear in Python code, or could appear in Python code, and could be associated with a symbol.
+
+  A symbol is associated with an object using a Python dictionary. The symbol is the key, and the object is that thing which is 'looked up' via that key.
+
+  <h1>Path</h1>
+
+  <h2>Individual Path</h2>
+
+  In the TTCA we provided formal definition for a 'tape'.  A tape has a leftmost cell, one or more in between cells, and a rightmost cell. For a one cell tape, the one cell is both the leftmost cell and the rightmost cell. A zero cell tape either does not exist, or it is a higher order 'placeholder' concept.
+
+  A 'path' is special case of a 'tape', as defined in the TTCA, with some additional constraints.
+
+  Each cell of a path holds a symbol.
+
+  The leftmost cell is called the 'destination'. The reader might have expected the path to go from left to right on the tape, in the same order that a person reads the words on a printed page, but such a definition would run into a problem, as left to right traversal of a tape might not ever end. Think about it this way, you are sitting in a pub of an inn, and a stranger walks in. Though you know the stranger's current destination, you might now know where he came from.
+
+  All the cells of the path to the right of the destination cell, are called 'the way'. If we were to drop the leftmost cell from the tape, then we would find 'the way' if it exists, to be another tape.
+
+  <h2>Discrete Function</h2>
+
+  Consider another tape where each cell holds a path.
+
+  If when we compare all the paths on said tape, and find that no two identical ways lead to different destinations, we can call said tape a 'discrete function'.  It is 'discrete' because of the type of math we are doing here, with symbols and tape cells. It is a 'function' because a given way never has two destinations.
+
+  Topologically it gives us a satisfying feeling that a given 'way' never leads to different destinations. If it were otherwise we would feel to be in a sci-fi movie. 
+
+  Note, however, there can exist more than one way to reach the same destination, though there might not be. Again, this fits our intuition of real paths.
+
+  Because functions embody our intuition about the space we live in, they occur often when doing real world modeling. There is also something about this quality that makes discrete functions useful in computer science.
+  
+  A common notation for a function is:
+  ```
+  destination = f(way)
+  ```
+
+  This notation is possible because the same way always leads to the given destination.
+
+  
+
+  
+  
+
+
+  <script src="style/theme_RT.js"></script>
+  <script src="style/article_generic.js"></script>
+  <script src="style/page_each_H1.js"></script>
+  <script src="style/toc.js"></script>
+  <script src="style/page.js"></script>
+  <script src="style/MathJax.js"></script>
+  <script src="style/body_visibility_visible.js"></script>
+
+  <script>
+    ( function(){
+      const StyleRT = window.StyleRT;
+      StyleRT.MathJax();
+      StyleRT.page_each_H1();
+      StyleRT.toc();
+      StyleRT.article_generic();
+      StyleRT.page();
+      StyleRT.body_visibility_visible();
+    } )();
+  </script>
+
+</body>
+</html>
