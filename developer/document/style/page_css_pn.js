@@ -1,47 +1,61 @@
 /*
   Defines the appearance of the <RT-PAGE> container.
-  Uses grouped settings from RT.layout and RT.typography.
 */
 window.StyleRT = window.StyleRT || {};
 
 window.StyleRT.page = function() {
   const RT = window.StyleRT;
+  
+  // Fallback accent
+  const theme_accent = (RT.config && RT.config.theme) ? RT.config.theme.accent : "hsl(42, 100%, 50%)";
+
+  RT.config = RT.config || {};
+  
+  // Fix: Define defaults independently
+  const defaults = {
+    width: "100%"
+    ,height: "1056px"
+    ,padding: "3rem"
+    ,margin: "4rem auto"
+    ,border_color: theme_accent
+    ,shadow: "drop-shadow(8px 12px 40px hsl(44, 96%, 47%))"
+  };
+
+  // Fix: MERGE defaults into existing config. 
+  // This allows overrides but prevents empty objects from causing "undefined" CSS.
+  RT.config.page = Object.assign({}, defaults, RT.config.page || {});
+
+  const conf = RT.config.page;
   const style_id = 'rt-page-styles';
   
-  // Safety fallbacks in case article_generic failed or hasn't run
-  const layout = RT.layout || { page_height: 1056, page_margin: '4rem auto' };
-  const typo = RT.typography || { orphans: 4, widows: 4 };
-
   if (!document.getElementById(style_id)) {
     const style_el = document.createElement('style');
     style_el.id = style_id;
     
     style_el.textContent = `
-      body {
+      rt-article {
         counter-reset: rt-page-counter;
       }
 
       rt-page {
         display: block;
-        max-width: ${layout.page_width || '50rem'};
-        width: 100%;
-        margin: ${layout.page_margin};
-        padding: ${layout.page_padding || '3rem'};
+        width: ${conf.width};
+        height: ${conf.height};
+        margin: ${conf.margin};
+        padding: ${conf.padding};
         box-sizing: border-box;
-        background-color: hsl(0, 0%, 0%);
-        border: 1px solid hsl(42, 100%, 50%);
-        height: ${layout.page_height}px;
+        
+        background-color: black; 
+        
+        /* These should now be populated correctly */
+        border: 1px solid ${conf.border_color};
         position: relative;
-        filter: drop-shadow(8px 12px 40px hsl(44, 96%, 47%));
+        filter: ${conf.shadow};
+        
         counter-increment: rt-page-counter;
+        overflow: hidden; 
       }
 
-      rt-page p {
-        orphans: ${typo.orphans};
-        widows: ${typo.widows};
-      }
-
-      /* Brightened Page Counter */
       rt-page::after {
         content: "Page " counter(rt-page-counter);
         position: absolute;
@@ -50,7 +64,7 @@ window.StyleRT.page = function() {
         font-family: "Noto Sans JP", sans-serif;
         font-size: 0.9rem;
         font-weight: bold;
-        color: hsl(42, 100%, 75%); /* Much brighter, high-contrast gold */
+        color: ${conf.border_color}; 
       }
     `;
     document.head.appendChild(style_el);

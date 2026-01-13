@@ -1,41 +1,36 @@
 /*
   Master Loader & Orchestrator for StyleRT.
-  Loads utility.js first to ensure infrastructure (RT.debug) exists.
+  Renamed from do_style.js
 */
 
 window.StyleRT = window.StyleRT || {};
 
-window.StyleRT.do_style = function() {
+window.StyleRT.style_orchestrator = function() {
   const RT = window.StyleRT;
   
   const modules = [
-    'style/theme_RT.js',        
-    'style/RT_term.js',         
-    'style/RT_math.js',         
-    'style/RT_code.js',         
-    'style/article_generic.js', 
-    'style/RT_TOC.js',          
-    'style/paginate.js', 
+    // Theme & Semantics
+    'style/theme.js',        
+    'style/RT_term.js',          
+    'style/RT_math.js',          
+    'style/RT_code.js',          
+    'style/article.js', // Renamed from article_generic
+    'style/RT_TOC.js',           
+
+    // Layout & Pagination
     'style/paginate_by_element.js', 
-    //    'style/page.js',
-    //    'style/page_css.js',            
-    'style/page_css_pn.js',            
+    'style/page_css_pn.js',             
+
+    // Visibility
     'style/body_visibility_visible.js' 
   ];
 
-  // 1. Bootloader: Get the utility/logger in place first
+  // 1. Bootloader
   const utility = document.createElement('script');
   utility.src = 'style/utility.js';
   
-  utility.onload = () => {
-    // Infrastructure ready; begin module sequence
-    load_next(0);
-  };
-
-  utility.onerror = () => {
-    console.error("StyleRT: Critical failure - utility.js missing.");
-  };
-
+  utility.onload = () => { load_next(0); };
+  utility.onerror = () => { console.error("StyleRT: Critical failure - utility.js missing."); };
   document.head.appendChild(utility);
 
   // 2. The Chain Loader
@@ -44,10 +39,7 @@ window.StyleRT.do_style = function() {
       run_style();
       return;
     }
-    
     const src = modules[index];
-
-    // Accessing the property live so it doesn't matter if it was set late
     if (RT.debug) RT.debug.log('style', `Loading: ${src}`);
 
     const script = document.createElement('script');
@@ -64,12 +56,13 @@ window.StyleRT.do_style = function() {
   const run_style = () => {
     RT.debug.log('style', 'Starting Phase 1: Setup & Semantics');
 
-    if(RT.article_generic) RT.article_generic();
+    // Naming Convention: RT.<filename_without_js>
+    if(RT.theme) RT.theme();     // Was theme
+    if(RT.article) RT.article(); // Was article_generic
     if(RT.RT_term) RT.RT_term();
     if(RT.RT_math) RT.RT_math();
     if(RT.RT_code) RT.RT_code();
 
-    // Hand off to MathJax task queue
     if (window.MathJax && MathJax.Hub && MathJax.Hub.Queue) {
       RT.debug.log('style', 'MathJax detected. Queueing layout tasks...');
       MathJax.Hub.Queue(["Typeset", MathJax.Hub], continue_style);
@@ -82,9 +75,12 @@ window.StyleRT.do_style = function() {
   const continue_style = () => {
     RT.debug.log('style', 'Starting Phase 2: Layout & Reveal');
     
+    // Debug: Dump the config to see what values we are using
+    if(RT.debug) RT.debug.log('config', JSON.stringify(RT.config || {}, null, 2));
+    
     if(RT.RT_TOC) RT.RT_TOC();
     if(RT.paginate_by_element) RT.paginate_by_element();
-    if(RT.page) RT.page();
+    if(RT.page) RT.page(); // Defined in page_css_pn.js
     if(RT.body_visibility_visible) RT.body_visibility_visible();
     
     RT.debug.log('style', 'Style execution complete.');

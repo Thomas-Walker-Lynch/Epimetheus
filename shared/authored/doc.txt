@@ -1,0 +1,7 @@
+The "General Observations" ApproachInstead of strict rule compliance, we can code these three Typesetting Heuristics:
+
+The "Hollow Shell" (Multi-Level)If a pair of parentheses contains structure (other parens/braces), it is a "Hollow Shell." It should have air inside.if(check()) $\rightarrow$ if( check() )((a)) $\rightarrow$ ( (a) )
+
+The "Shrink Wrap" (Single-Level)If a pair of parentheses contains only "atoms" (text, numbers, commas) and no structure, it should "shrink wrap" the content tightly.func( a, b ) $\rightarrow$ func(a ,b)( 1 + 2 ) $\rightarrow$ (1 + 2)
+
+The "Stack Separation" (Widows/Orphans)When we see a pile-up of closing delimiters at the start of a line (widows) or opening delimiters (orphans), we assume they represent different logical layers collapsing. We visually separate the "outer" layer from the "inner" pile.}) $\rightarrow$ } ) (Step out of the block, then close the parent).))  $\rightarrow$ ) ) (Close the child, then close the parent).

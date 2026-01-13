@@ -1,139 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Epimetheus: The Only Primitive</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
-  
-  <script src="style/body_visibility_hidden.js"></script>
-  <script>
-    window.StyleRT.body_visibility_hidden();
-  </script>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8">
+    <title>Epimetheus: The Only Primitive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+    
+    <script src="style/body_visibility_hidden.js"></script>
+    <script>
+      window.StyleRT.body_visibility_hidden();
+    </script>
+  </head>
+  <body>
+    <RT-article>  
+      <h1>Given</h1>
+      <p>The English language is a given, apparently.</p>
+      <p>
+        This discussion happens to appear in the context of a Python language 
+        implementation, though it applies equally as well to other languages.
+      </p>
 
-  <h1>Given</h1>
-  <p>The English language is a given, apparently.</p>
-  <p>
-    This discussion happens to appear in the context of a Python language 
-    implementation, though it applies equally as well to other languages.
-  </p>
+      <h1>Symbol</h1>
+      <h2>Definition</h2>
+      <p>
+        We have a symbol instance factory. Each time the <RT-code>make</RT-code> 
+        method on the factory is called, the factory returns an instance of a 
+        distinct symbol.
+      </p>
 
-  <h1>Symbol</h1>
-  <h2>Definition</h2>
-  <p>
-    We have a symbol instance factory. Each time the <RT-code>make</RT-code> 
-    method on the factory is called, the factory returns an instance of a 
-    distinct symbol.
-  </p>
+      <p>
+        A symbol instance may be copied as though it were an integer. Thus, a 
+        common method for making a copy is assignment, e.g., 
+        <RT-code>x = y</RT-code>, where <RT-code>y</RT-code> is a variable holding 
+        a symbol instance. After execution of the assignment, <RT-code>x</RT-code> 
+        will hold another instance of the symbol.
+      </p>
 
-  <p>
-    A symbol instance may be copied as though it were an integer. Thus, a 
-    common method for making a copy is assignment, e.g., 
-    <RT-code>x = y</RT-code>, where <RT-code>y</RT-code> is a variable holding 
-    a symbol instance. After execution of the assignment, <RT-code>x</RT-code> 
-    will hold another instance of the symbol.
-  </p>
+      <p>
+        Any two, or by transitivity, any number of, symbol instances can be 
+        compared for equality using an integer equality comparison: 
+        <RT-code>x == y</RT-code>. A comparison between symbol-holding variables 
+        will always return <RT-code>True</RT-code> or <RT-code>False</RT-code>.
+      </p>
 
-  <p>
-    Any two, or by transitivity, any number of, symbol instances can be 
-    compared for equality using an integer equality comparison: 
-    <RT-code>x == y</RT-code>. A comparison between symbol-holding variables 
-    will always return <RT-code>True</RT-code> or <RT-code>False</RT-code>.
-  </p>
+      <p>
+        It follows that any two symbol instances directly returned from the 
+        factory will always equality compare to be <RT-code>False</RT-code>.
+      </p>
 
-  <p>
-    It follows that any two symbol instances directly returned from the 
-    factory will always equality compare to be <RT-code>False</RT-code>.
-  </p>
+      <p>
+        An equivalence set of symbol instances is a functional representation of 
+        the symbol. The name of this set is yet another instance of said symbol. 
+        Thus, every instance of the symbol represents the symbol.
+      </p>
 
-  <p>
-    An equivalence set of symbol instances is a functional representation of 
-    the symbol. The name of this set is yet another instance of said symbol. 
-    Thus, every instance of the symbol represents the symbol.
-  </p>
+      <p>
+        Though symbol instances are integer-like for copy and equality compare, 
+        they are disallowed from being used with other integer operators. 
+        Symbols cannot be compared for greater-than or less-than; they cannot be 
+        incremented, added, nor subtracted, etc.
+      </p>
 
-  <p>
-    Though symbol instances are integer-like for copy and equality compare, 
-    they are disallowed from being used with other integer operators. 
-    Symbols cannot be compared for greater-than or less-than; they cannot be 
-    incremented, added, nor subtracted, etc.
-  </p>
+      <h2>Distinctness Across Contexts</h2>
+      <p>
+        If a symbol persists across contexts, such as across scopes or processes, 
+        it must remain distinct from all other symbols as it enters into those 
+        new processes or contexts.
+      </p>
 
-  <h2>Distinctness Across Contexts</h2>
-  <p>
-    If a symbol persists across contexts, such as across scopes or processes, 
-    it must remain distinct from all other symbols as it enters into those 
-    new processes or contexts.
-  </p>
+      <p>
+        In this implementation, we meet this constraint by using a global symbol 
+        factory and by explicitly disallowing a symbol from being used outside 
+        the process it was made in.
+      </p>
 
-  <p>
-    In this implementation, we meet this constraint by using a global symbol 
-    factory and by explicitly disallowing a symbol from being used outside 
-    the process it was made in.
-  </p>
+      <h1>Object</h1>
+      <h2>Definition</h2>
+      <p>
+        The term "Python object" refers to anything that can or could
+        appear in Python code and could be associated with a symbol. This
+        includes symbols themselves.
+      </p>
 
-  <h1>Object</h1>
-  <h2>Definition</h2>
-  <p>
-    The term "Python object" refers to anything that can or could
-    appear in Python code and could be associated with a symbol. This
-    includes symbols themselves.
-  </p>
+      <p>
+        A symbol is associated with an object using a Python dictionary. The 
+        symbol is the key, and the object is that thing which is "looked up" 
+        via said key.
+      </p>
 
-  <p>
-    A symbol is associated with an object using a Python dictionary. The 
-    symbol is the key, and the object is that thing which is "looked up" 
-    via said key.
-  </p>
+      <h1>Path</h1>
+      <h2>Individual Path</h2>
+      <p>
+        In the TTCA, we provided a formal definition for a "tape." A tape has a 
+        leftmost cell, one or more "in-between" cells, and a rightmost cell. 
+        A "path" is a special case of a tape with additional constraints.
+      </p>
 
-  <h1>Path</h1>
-  <h2>Individual Path</h2>
-  <p>
-    In the TTCA, we provided a formal definition for a "tape." A tape has a 
-    leftmost cell, one or more "in-between" cells, and a rightmost cell. 
-    A "path" is a special case of a tape with additional constraints.
-  </p>
+      <p>
+        Each cell of a path holds a symbol. The leftmost cell is called the 
+        <strong>destination</strong>. The reader might have expected the path 
+        to go from left to right, but such a definition would run into a problem, 
+        as left-to-right traversal might not ever end. 
+      </p>
 
-  <p>
-    Each cell of a path holds a symbol. The leftmost cell is called the 
-    <strong>destination</strong>. The reader might have expected the path 
-    to go from left to right, but such a definition would run into a problem, 
-    as left-to-right traversal might not ever end. 
-  </p>
+      <blockquote>
+        Think about it this way: you are sitting in a pub of an inn, and a 
+        stranger walks in. Though you know the stranger's current destination, 
+        you might not know where he came from.
+      </blockquote>
 
-  <blockquote>
-    Think about it this way: you are sitting in a pub of an inn, and a 
-    stranger walks in. Though you know the stranger's current destination, 
-    you might not know where he came from.
-  </blockquote>
+      <p>
+        All cells of the path to the right of the destination cell are called 
+        "the way." If we were to drop the leftmost cell from the tape, then we 
+        would find "the way," if it exists, to be another tape.
+      </p>
 
-  <p>
-    All cells of the path to the right of the destination cell are called 
-    "the way." If we were to drop the leftmost cell from the tape, then we 
-    would find "the way," if it exists, to be another tape.
-  </p>
+      <h2>Discrete Function</h2>
+      <p>
+        Consider another tape where each cell holds a path. If we compare all 
+        paths on said tape and find that no two identical "ways" lead to 
+        different destinations, we call said tape a <strong>discrete function</strong>.
+      </p>
 
-  <h2>Discrete Function</h2>
-  <p>
-    Consider another tape where each cell holds a path. If we compare all 
-    paths on said tape and find that no two identical "ways" lead to 
-    different destinations, we call said tape a <strong>discrete function</strong>.
-  </p>
+      <RT-math>
+        destination = f(way)
+      </RT-math>
 
-  <RT-math>
-    destination = f(way)
-  </RT-math>
+      <p>
+        This notation is possible because the same way always leads to the given 
+        destination.
+      </p>
 
-  <p>
-    This notation is possible because the same way always leads to the given 
-    destination.
-  </p>
-
-  <script src="style/do_style.js"></script>
-  <script>
-    window.StyleRT.do_style();
-  </script>
-
-</body>
+      <script src="style/style_orchestrator.js"></script>
+      <script>
+        window.StyleRT.style_orchestrator();
+      </script>
+    </RT-article>
+  </body>
 </html>
