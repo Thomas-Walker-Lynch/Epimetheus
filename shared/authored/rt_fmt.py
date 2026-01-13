@@ -485,15 +485,27 @@ def process_file(in_fp, out_fp):
 def CLI():
     global RT_DEBUG
     args = sys.argv[1:]
+    
     if "-d" in args:
         RT_DEBUG = True
         args.remove("-d")
+        
+    # Check for Pipe Mode
+    if "--pipe" in args or "-" in args:
+        process_pipe()
+        return
+
+    # Standard File Mode
     if len(args) < 1:
         print("Usage: rt_fmt [-d] <in_file> [out_file]")
+        print("       rt_fmt [-d] --pipe  (Reads stdin, writes stdout)")
         sys.exit(1)
+        
     in_fp = args[0]
     out_fp = args[1] if len(args) > 1 else in_fp
+    
     process_file(in_fp, out_fp)
-    if RT_DEBUG: print(f"Formatted: {in_fp} -> {out_fp}")
+    if RT_DEBUG: print(f"Formatted: {in_fp} -> {out_fp}", file=sys.stderr)
+
 
 if __name__ == "__main__": CLI()
