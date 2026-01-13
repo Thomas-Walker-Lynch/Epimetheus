@@ -15,6 +15,7 @@ window.StyleRT.do_style = function() {
     'style/RT_code.js',         
     'style/article_generic.js', 
     'style/RT_TOC.js',          
+    'style/paginate.js', 
     'style/paginate_by_element.js', 
     //    'style/page.js',
     //    'style/page_css.js',            

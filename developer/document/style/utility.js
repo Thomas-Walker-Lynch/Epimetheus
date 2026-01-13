@@ -11,7 +11,7 @@ window.StyleRT = window.StyleRT || {};
 // --- DEBUG SYSTEM ---
 window.StyleRT.debug = {
   // Add tokens here to enable specific logs: 'RT_code', 'layout', 'style', 'layout'
-  active_tokens: new Set(['style', 'layout']),
+  active_tokens: new Set(['style' ,'layout' ,'pagination']),
 
   log: function(token, message) {
     if (this.active_tokens.has(token)) {
