@@ -23,16 +23,16 @@
   <h1>Symbol</h1>
   <h2>Definition</h2>
   <p>x
-    We have a symbol instance factory. Each time the <rt-code>make</rt-code> 
-    method is called, we get a unique identity <rt-math>i</rt-math>.
+    We have a symbol instance factory. Each time the <RT-code>make</RT-code> 
+    method is called, we get a unique identity <RT-math>i</RT-math>.
 
     A symbol instance may be copied as though it were an integer. 
     Thus, a common method for making a copy is assignment:
   </p>
-  <rt-code>
+  <RT-code>
 x = y
 # y is a variable holding a symbol instance
-  </rt-code>
+  </RT-code>
 
   <p>
     1. A symbol instance may be copied as though it were an integer. 
@@ -75,18 +75,18 @@ x = y
   <p>Topologically it gives us a satisfying feeling that a given 'way' never leads to different destinations.</p>
 
   <p>A common notation for a function is:</p>
-  <rt-math>
+  <RT-math>
     destination = f(way)
-  </rt-math>
+  </RT-math>
 
   <p>
     Because the same way always leads to the given destination, 
     we can represent the mapping as follows:
   </p>
-  <rt-code>
+  <RT-code>
     def resolve_path(way):
       return hypergraph.lookup(way)
-  </rt-code>
+  </RT-code>
 
   <script src="style/style_orchestrator.js"></script>
   <script>

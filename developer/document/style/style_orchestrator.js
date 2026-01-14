@@ -10,7 +10,7 @@ window.StyleRT.style_orchestrator = function() {
   
   const modules = [
     // Theme & Semantics
-    'style/theme_light_gold.js',        
+    'style/theme_dark_gold.js',        
     'style/RT_term.js',          
     'style/RT_math.js',          
     'style/RT_code.js',          
