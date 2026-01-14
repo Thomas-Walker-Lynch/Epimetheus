@@ -14,7 +14,7 @@
     RT.config.article = {
        font_family: '"Noto Sans", "Segoe UI", "Helvetica Neue", sans-serif'
       ,line_height: "1.8"       // Generous spacing for screen reading
-      ,font_size: "18px"        // Large base size for clarity
+      ,font_size: "16px"        // Large base size for clarity
       ,max_width: "820px" 
       ,margin: "0 auto"
     };
@@ -51,39 +51,50 @@
         /* --- HEADERS --- */
         rt-article h1 { 
           color: var(--rt-brand-primary);
-          font-size: 2.4em; 
-          font-weight: 700; 
+          font-size: 2.0em; 
+          font-weight: 500; 
+          text-align: center;
           margin-top: 1.2em; 
           margin-bottom: 0.6em; 
-          border-bottom: 2px solid var(--rt-brand-primary);
+          border-bottom: 2px solid var(--rt-border-default);
           padding-bottom: 0.3em;
           line-height: 1.2;
           letter-spacing: -0.02em;
         }
-        
+
         rt-article h2 { 
           color: var(--rt-brand-secondary);
-          font-size: 1.8em; 
-          font-weight: 600; 
-          margin-top: 1.5em; 
+          font-size: 1.5em; 
+          font-weight: 400; 
+          text-align: center;
+          margin-top: 1.0em; 
           margin-bottom: 0.5em; 
-          border-bottom: 1px dotted var(--rt-border-default);
+          }
+
+        rt-article h2 + h3 {
+           margin-top: -0.3em; 
+           padding-top: 0;
         }
 
         rt-article h3 { 
           color: var(--rt-brand-tertiary);
           font-size: 1.4em; 
-          font-weight: 600;
-          margin-top: 1.4em; 
+          font-weight: 400;
+          margin-top: 1.0em; 
           margin-bottom: 0.5em;
-          font-style: italic;
         }
         
+        /* --- DEEP LEVELS (H4-H6) --- */
         rt-article h4, rt-article h5, rt-article h6 {
-           color: var(--rt-content-main);
+           color: var(--rt-brand-tertiary);
            font-weight: bold;
            margin-top: 1.2em;
+           font-style: italic;
         }
+        /* Increasing Indentation (Steps of ~4 spaces) */
+        rt-article h4 { margin-left: 2em; }
+        rt-article h5 { margin-left: 4em; }
+        rt-article h6 { margin-left: 6em; }
 
         /* --- BODY TEXT --- */
         rt-article p { 

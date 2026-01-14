@@ -24,7 +24,7 @@
       ,surface_select:  "hsl(45, 100%, 15%)"  // Text Selection Highlight
 
       // --- CONTENT (Text & Icons) ---
-      ,content_main:    "hsl(36, 30%, 85%)"   // Primary Reading Text
+      ,content_main:    "hsl(50, 60%, 85%)"   // Primary Reading Text
       ,content_muted:   "hsl(36, 15%, 60%)"   // Metadata, subtitles
       ,content_subtle:  "hsl(36, 10%, 40%)"   // Placeholders, disabled states
       ,content_inverse: "hsl(0, 0%, 5%)"      // Text on high-contrast buttons

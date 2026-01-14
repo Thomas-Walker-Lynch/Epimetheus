@@ -12,20 +12,24 @@
   </head>
   <body>
     <RT-article>  
-      <h1>Given</h1>
+      <h1>Assumptions and Terms</h1>
+
+      <h2>Given</h1>
       <p>The English language is a given, apparently.</p>
       <p>
         This discussion happens to appear in the context of a Python language 
         implementation, though it applies equally as well to other languages.
       </p>
 
-      <h1>Symbol</h1>
-      <h2>Definition</h2>
+      <h2>Symbol</h1>
+      <h3>Definition</h2>
       <p>
         We have a symbol instance factory. Each time the <RT-code>make</RT-code> 
         method on the factory is called, the factory returns an instance of a 
         distinct symbol.
       </p>
+
+     <h4>In shock</h4>
 
       <p>
         A symbol instance may be copied as though it were an integer. Thus, a 
@@ -60,7 +64,7 @@
         incremented, added, nor subtracted, etc.
       </p>
 
-      <h2>Distinctness Across Contexts</h2>
+      <h3>Distinctness Across Contexts</h2>
       <p>
         If a symbol persists across contexts, such as across scopes or processes, 
         it must remain distinct from all other symbols as it enters into those 
@@ -73,8 +77,8 @@
         the process it was made in.
       </p>
 
-      <h1>Object</h1>
-      <h2>Definition</h2>
+      <h2>Object</h1>
+      <h3>Definition</h2>
       <p>
         The term "Python object" refers to anything that can or could
         appear in Python code and could be associated with a symbol. This
@@ -87,8 +91,8 @@
         via said key.
       </p>
 
-      <h1>Path</h1>
-      <h2>Individual Path</h2>
+      <h2>Path</h1>
+      <h3>Individual Path</h2>
       <p>
         In the TTCA, we provided a formal definition for a "tape." A tape has a 
         leftmost cell, one or more "in-between" cells, and a rightmost cell. 
@@ -114,7 +118,7 @@
         would find "the way," if it exists, to be another tape.
       </p>
 
-      <h2>Discrete Function</h2>
+      <h3>Discrete Function</h2>
       <p>
         Consider another tape where each cell holds a path. If we compare all 
         paths on said tape and find that no two identical "ways" lead to 
