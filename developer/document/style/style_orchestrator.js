@@ -10,16 +10,16 @@ window.StyleRT.style_orchestrator = function() {
   
   const modules = [
     // Theme & Semantics
-    'style/theme.js',        
+    'style/theme_dark_gold.js',        
     'style/RT_term.js',          
     'style/RT_math.js',          
     'style/RT_code.js',          
-    'style/article.js', // Renamed from article_generic
+    'style/article_tech_ref.js', // Renamed from article_generic
     'style/RT_TOC.js',           
 
     // Layout & Pagination
     'style/paginate_by_element.js', 
-    'style/page_css_pn.js',             
+    'style/page_fixed_glow.js',             
 
     // Visibility
     'style/body_visibility_visible.js' 
