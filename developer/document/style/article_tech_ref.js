@@ -15,9 +15,13 @@
        font_family: '"Noto Sans", "Segoe UI", "Helvetica Neue", sans-serif'
       ,line_height: "1.8"       // Generous spacing for screen reading
       ,font_size: "16px"        // Large base size for clarity
+      ,font_weight: 400
       ,max_width: "820px" 
       ,margin: "0 auto"
     };
+    if (RT.config.theme && RT.config.theme.meta_is_dark === false) {
+       RT.config.article.font_weight = "600";
+    }
 
     const conf = RT.config.article;
     const article_seq = document.querySelectorAll("RT-article");
@@ -33,6 +37,7 @@
       style.fontFamily = conf.font_family;
       style.fontSize = conf.font_size;
       style.lineHeight = conf.line_height;
+      style.fontWeight = conf.font_weight;
       style.maxWidth = conf.max_width;
       style.margin = conf.margin;
       style.padding = "0 20px"; // Mobile buffer

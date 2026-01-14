@@ -1,56 +1,57 @@
 /*
-  Theme: Classic Wheat (Light)
+  Theme: Golden Wheat (Light) - "Spanish Gold Edition"
+  File: style/theme-light-gold.js
   Standard: Theme 1.0
-  Description: Warm paper tones with Burnt Orange accents.
+  Description: Light Parchment background with Oxblood Red ink.
 */
 ( function(){
   const RT = window.StyleRT = window.StyleRT || {};
   
-  RT.theme_light = function(){
+  RT.theme = function(){
     RT.config = RT.config || {};
     
-    // THEME 1.0 DATA CONTRACT
     RT.config.theme = {
        meta_is_dark: false
-      ,meta_name:    "Classic Wheat"
+      ,meta_name:    "Golden Wheat (Yellow)"
 
-      // --- SURFACES ---
-      ,surface_0:       "hsl(40, 30%, 94%)"   // App Background (Cream/Linen)
-      ,surface_1:       "hsl(40, 25%, 90%)"   // Sidebar (Slightly darker beige)
-      ,surface_2:       "hsl(40, 20%, 98%)"   // Cards (Lighter, almost white)
-      ,surface_3:       "hsl(0, 0%, 100%)"    // Modals (Pure White)
-      ,surface_input:   "hsl(40, 20%, 98%)"   // Form Inputs
-      ,surface_code:    "hsl(40, 15%, 90%)"   // Code Block Background
-      ,surface_select:  "hsl(45, 100%, 85%)"  // Text Selection Highlight
+      // --- SURFACES (Light Parchment) ---
+      // Shifted lightness up to 94% for a "whiter" feel that still holds the yellow tint.
+      ,surface_0:       "hsl(48, 50%, 94%)"   // Main Page: Fine Parchment
+      ,surface_1:       "hsl(48, 40%, 90%)"   // Panels: Slightly darker
+      ,surface_2:       "hsl(48, 30%, 97%)"   // Cards: Very light
+      ,surface_3:       "hsl(0, 0%, 100%)"    // Popups
+      ,surface_input:   "hsl(48, 20%, 96%)"   
+      ,surface_code:    "hsl(48, 25%, 88%)"   // Distinct Code BG
+      ,surface_select:  "hsl(10, 70%, 85%)"   // Red Highlight
 
-      // --- CONTENT ---
-      ,content_main:    "hsl(30, 20%, 20%)"   // Deep Umber (Not Black)
-      ,content_muted:   "hsl(30, 15%, 45%)"   // Medium Brown
-      ,content_subtle:  "hsl(30, 10%, 65%)"   // Light Brown/Gray
-      ,content_inverse: "hsl(40, 30%, 94%)"   // Text on dark buttons
+      // --- CONTENT (Deep Ink) ---
+      ,content_main:    "hsl(10, 25%, 7%)"    // Deep Warm Black (Ink)
+      ,content_muted:   "hsl(10, 15%, 35%)"   // Dark Grey-Red
+      ,content_subtle:  "hsl(10, 10%, 55%)"   
+      ,content_inverse: "hsl(48, 50%, 90%)"   
 
-      // --- BRAND & ACTION ---
-      ,brand_primary:   "hsl(30, 90%, 35%)"   // Burnt Orange (Action)
-      ,brand_secondary: "hsl(35, 70%, 45%)"   // Rust / Gold
-      ,brand_tertiary:  "hsl(25, 60%, 55%)"   // Copper
-      ,brand_link:      "hsl(30, 100%, 35%)"  // Link Color
+      // --- BRAND & ACTION (The Red Spectrum) ---
+      ,brand_primary:   "hsl(12, 85%, 30%)"   // H1 (Deep Oxblood)
+      ,brand_secondary: "hsl(10, 80%, 35%)"   // H2 (Garnet)
+      ,brand_tertiary:  "hsl(8, 70%, 40%)"    // H3 (Brick)
+      ,brand_link:      "hsl(12, 90%, 35%)"   // Link
 
       // --- BORDERS ---
-      ,border_faint:    "hsl(35, 20%, 85%)"
-      ,border_default:  "hsl(35, 20%, 75%)"
-      ,border_strong:   "hsl(35, 20%, 55%)"
+      ,border_faint:    "hsl(45, 30%, 80%)"
+      ,border_default:  "hsl(45, 30%, 70%)"   // Pencil Grey
+      ,border_strong:   "hsl(12, 50%, 40%)"   
 
-      // --- STATE & FEEDBACK ---
-      ,state_success:   "hsl(100, 40%, 40%)"  // Forest Green
-      ,state_warning:   "hsl(30, 90%, 50%)"   // Persimmon
-      ,state_error:     "hsl(0, 60%, 45%)"    // Crimson
-      ,state_info:      "hsl(200, 50%, 45%)"  // Navy Blue
+      // --- STATE ---
+      ,state_success:   "hsl(120, 40%, 30%)"  
+      ,state_warning:   "hsl(25, 90%, 45%)"   
+      ,state_error:     "hsl(0, 75%, 35%)"    
+      ,state_info:      "hsl(210, 60%, 40%)"  
 
       // --- SYNTAX ---
-      ,syntax_keyword:  "hsl(20, 90%, 45%)"   // Rust
-      ,syntax_string:   "hsl(100, 35%, 35%)"  // Ivy Green
-      ,syntax_func:     "hsl(300, 30%, 40%)"  // Muted Purple
-      ,syntax_comment:  "hsl(35, 10%, 60%)"   // Light Brown
+      ,syntax_keyword:  "hsl(0, 75%, 35%)"    
+      ,syntax_string:   "hsl(100, 35%, 25%)"  
+      ,syntax_func:     "hsl(15, 85%, 35%)"   
+      ,syntax_comment:  "hsl(45, 20%, 50%)"   
     };
 
     // --- APPLY THEME ---
@@ -66,5 +67,41 @@
     for (const [key, value] of Object.entries(palette)) {
       s.setProperty(`--rt-${key.replace(/_/g, '-')}`, value);
     }
+    
+    // Global overrides
+    const style_id = 'rt-global-overrides';
+    if (!document.getElementById(style_id)) {
+      const style = document.createElement('style');
+      style.id = style_id;
+      style.textContent = `
+        ::selection { background: var(--rt-surface-select); color: var(--rt-brand-primary); }
+        ::-moz-selection { background: var(--rt-surface-select); color: var(--rt-brand-primary); }
+        
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: var(--rt-surface-0); }
+        ::-webkit-scrollbar-thumb { 
+           background: var(--rt-border-default); 
+           border: 2px solid var(--rt-surface-0);
+           border-radius: 8px; 
+        }
+        ::-webkit-scrollbar-thumb:hover { background: var(--rt-brand-secondary); }
+
+        rt-article p, rt-article li {
+           text-shadow: 0px 0px 0.5px rgba(0,0,0, 0.2); 
+        }
+
+        .MathJax, .MathJax_Display, .mjx-chtml {
+            color: var(--rt-content-main) !important;
+            fill: var(--rt-content-main) !important;
+            stroke: var(--rt-content-main) !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
   };
+  
+  if(!RT.theme_loaded) {
+     RT.theme();
+     RT.theme_loaded = true;
+  }
 } )();

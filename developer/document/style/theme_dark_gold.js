@@ -6,7 +6,7 @@
 ( function(){
   const RT = window.StyleRT = window.StyleRT || {};
   
-  RT.theme_dark = function(){
+  RT.theme = function(){
     RT.config = RT.config || {};
     
     // THEME 1.0 DATA CONTRACT
