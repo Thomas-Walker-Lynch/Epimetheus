@@ -1,6 +1,5 @@
 /*
   Master Loader & Orchestrator for StyleRT.
-  Renamed from do_style.js
 */
 
 window.StyleRT = window.StyleRT || {};
@@ -10,12 +9,13 @@ window.StyleRT.style_orchestrator = function() {
   
   const modules = [
     // Theme & Semantics
+    'style/RT_title.js',       
     'style/theme_dark_gold.js',        
     'style/RT_term.js',          
     'style/RT_math.js',          
     'style/RT_code.js',          
-    'style/article_tech_ref.js', // Renamed from article_generic
-    'style/RT_TOC.js',           
+    'style/article_tech_ref_2.js',
+    'style/RT_TOC.js',            
 
     // Layout & Pagination
     'style/paginate_by_element.js', 
@@ -57,8 +57,12 @@ window.StyleRT.style_orchestrator = function() {
     RT.debug.log('style', 'Starting Phase 1: Setup & Semantics');
 
     // Naming Convention: RT.<filename_without_js>
-    if(RT.theme) RT.theme();     // Was theme
-    if(RT.article) RT.article(); // Was article_generic
+    if(RT.theme) RT.theme();     
+    if(RT.article) RT.article(); 
+    
+    // NEW: Trigger the Title Generator
+    if(RT.RT_title) RT.RT_title(); 
+
     if(RT.RT_term) RT.RT_term();
     if(RT.RT_math) RT.RT_math();
     if(RT.RT_code) RT.RT_code();

@@ -30,7 +30,7 @@
         The code related to this discussion is implemented in Python, however issues with other languages are considered. On salient difference that is considered is that Python integers are bignums are passed by reference. In some other languages integers are considered primitives, are bounded and bit copied.
       </p>
 
-<h2>Symbol</h2>
+      <h2>Symbol</h2>
 
       <h3>Instance</h3>
 
@@ -85,64 +85,6 @@
 
       <p>
         The factory’s <RT-code>make</RT-code> returns an original instance that is not equal to any other original. All copies stemming from an original remain in the same equivalence class. Therefore any instance in the class can represent the symbol, and we may choose any one instance as the symbol’s name (a canonical representative), or we could use a dictionary, and use, say, the original instance, to lookup a string as a name.
-      </p>
-
-      <h2>Symbol</h2>
-
-      <h3>Instance</h3>
-
-      <p>
-        We are given a symbol instance factory. Each time the <RT-code>make</RT-code> function on the factory interface is called, the factory returns an instance of a distinct symbol.
-      </p>
-
-      <p>
-        A symbol instance may be copied. A common method for
-        making a copy in many languages is to use assignment, e.g.,
-        <RT-code>x = y</RT-code>, where <RT-code>y</RT-code> is a variable holding a symbol instance. After execution of the assignment, <RT-code>x</RT-code> will hold another instance of the same symbol. However in Python an
-        assignment will copy a reference, and the symbol itself will not be copied.
-      </p>
-
-      <p>
-        Any two, or by transitivity, any number of, symbol instances can be compared for equality, say
-        <RT-code>x == y</RT-code>. A comparison between symbol instances 
-        will always return <RT-code>True</RT-code> or <RT-code>False</RT-code>.
-      </p>
-
-      <p>
-        A symbol instance newly minted using the given symbol factory <RT-code>make</RT-code> function is said to come direct from the factory.  Such a symbol is also called an <RT-term>original</RT-term>.
-      </p>
-
-      <h2>Required Properties</h2>
-
-      <p>
-        Any two symbol instances returned directly from the factory using two different make calls will always equality compare to be <RT-code>False</RT-code>. In other words, two distinct <RT-term>originals</RT-term> will always be not equal.
-      </p>
-
-      <p>
-        Given an original, all copies stemming from it will be equal to each other and to the original. By <RT-term>stemming</RT-term> we mean to include all direct copies and copies of copies.
-      </p>
-
-      <p>
-        Given any two originals, say A and B, we know that A is not equal to B, as discussed above. Note also that A is not equal to any copy stemming from B,  and B is not equal to any copy stemming from A.
-      </p>
-
-      <p>
-        Though symbol instances are integer-like in that copy and equality compare can be used with them, symbol instances are disallowed from being used with other integer operators.  Symbols cannot be compared for greater-than or less-than; they cannot be incremented, added, nor subtracted, etc.
-      </p>
-
-
-      <h2>What <em>is</em> a Symbol</h2>
-
-      <p>
-        A symbol is not manipulated directly. Only symbol instances exist at runtime.
-        </p>
-
-      <p>
-       Define a relation ~ over instances by x ~ y iff x == y. This partitions instances into equivalence classes. Each such equivalence class is a <RT-term>symbol</RT-term>.
-      <p>
-
-      <p>
-     The factory’s make returns an original instance that is not equal to any other original. All copies stemming from an original remain in the same equivalence class. Therefore any instance in the class can represent the symbol, and we may choose any one instance as the symbol’s name (a canonical representative).
       </p>
 
 

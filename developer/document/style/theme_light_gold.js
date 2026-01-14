@@ -100,8 +100,4 @@
     }
   };
   
-  if(!RT.theme_loaded) {
-     RT.theme();
-     RT.theme_loaded = true;
-  }
 } )();

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RT Style System: Reference Manual</title>
+  
+  <script src="style/body_visibility_hidden.js"></script>
+  <script> window.StyleRT.body_visibility_hidden(); </script>
+
+  <script src="style/utility.js"></script>
+  
+  <script src="style/theme_dark_gold.js"></script>
+  
+  <script src="style/article_tech_ref.js"></script>
+  
+  <script src="style/RT_math.js"></script>
+  <script src="style/RT_code.js"></script>
+  <script src="style/RT_term.js"></script>
+  <script src="style/RT_TOC.js"></script>
+  
+</head>
+<body>
+
+  <RT-title author="Gemini" date="2026-01-14" title="RT Style System: Reference Manual"></RT-title>
+  <RT-article>
+
+    <RT-TOC level="1"></RT-TOC>
+
+    <h1>Architecture Overview</h1>
+    <p>
+      The <RT-term>RT Style System</RT-term> is a client-side, JavaScript-driven publishing framework designed to turn raw HTML into high-readability technical documentation. Unlike standard CSS frameworks, RT uses JavaScript to handle complex layout tasks like <RT-neologism>ink-ratio balancing</RT-neologism> and dynamic pagination.
+    </p>
+
+    <h2>The Orchestrator</h2>
+    <p>
+      The core of the system is <RT-code>style_orchestrator.js</RT-code>. It is placed at the bottom of the HTML <RT-code>&lt;body&gt;</RT-code>. Its job is to:
+    </p>
+    <ol>
+      <li>Detect which modules are already loaded.</li>
+      <li>Load missing modules (defaulting to Dark Theme if none is specified).</li>
+      <li>Execute the <strong>Semantics Phase</strong> (styling tags).</li>
+      <li>Wait for MathJax (if present).</li>
+      <li>Execute the <strong>Layout Phase</strong> (pagination, page rendering).</li>
+      <li>Reveal the document.</li>
+    </ol>
+
+    <h1>Semantic Tags</h1>
+    <p>
+      The system relies on a specific set of custom tags in the <RT-code>RT-</RT-code> namespace to separate structure from presentation.
+    </p>
+
+    <h2>Terminology</h2>
+    <h3>Conventional Terms</h3>
+    <p>
+      Use <RT-code>&lt;RT-term&gt;</RT-code> for standard, industry-accepted technical terms.
+    </p>
+    <RT-code>
+The <RT-term>Singleton Pattern</RT-term> restricts instantiation...
+    </RT-code>
+    <p>
+      <em>Renders as:</em> The <RT-term>Singleton Pattern</RT-term> restricts instantiation...
+    </p>
+
+    <h3>Neologisms (Novel Concepts)</h3>
+    <p>
+      Use <RT-code>&lt;RT-neologism&gt;</RT-code> for terms invented specifically for the current document or project. This visually distinguishes "jargon you should know" from "jargon we just made up."
+    </p>
+    <RT-code>
+We define the <RT-neologism>Hyper-Tape</RT-neologism> as a construct...
+    </RT-code>
+    <p>
+      <em>Renders as:</em> We define the <RT-neologism>Hyper-Tape</RT-neologism> as a construct...
+    </p>
+
+    <h2>Technical Content</h2>
+
+    <h3>Code</h3>
+    <p>
+      Use <RT-code>&lt;RT-code&gt;</RT-code>. If placed inline, it acts like a span. If placed as a block (with newlines), it acts like a pre-formatted block with a theme-aware border.
+    </p>
+    
+    <RT-code>
+# Block Code Example
+def hello():
+    return "World"
+    </RT-code>
+
+    <h3>Mathematics</h3>
+    <p>
+      Use <RT-code>&lt;RT-math&gt;</RT-code>. The system auto-detects if it is a block equation or inline variable and wraps it in MathJax delimiters.
+    </p>
+    <p>
+      Inline: Let <RT-math>x</RT-math> be the input.
+    </p>
+    <p>
+      Block:
+    </p>
+    <RT-math>
+      f(x) = \sum_{i=0}^{n} x_i
+    </RT-math>
+
+     <h1>Navigation & Layout</h1>
+
+    <h2>Automatic Table of Contents</h2>
+    <p>
+      Use <RT-code>&lt;RT-TOC&gt;</RT-code> to insert a generated table of contents. The tag scans the document <em>forward</em> from its current position to collect headings.
+    </p>
+
+    <h3>Explicit Mode (Recommended)</h3>
+    <p>
+      Use the <RT-code>level="N"</RT-code> attribute to target a specific heading depth.
+    </p>
+    <ul>
+      <li><RT-code>&lt;RT-TOC level="1"&gt;</RT-code>: Collects all <RT-code>&lt;h1&gt;</RT-code> elements until the end of the document. Best for the main document index.</li>
+      <li><RT-code>&lt;RT-TOC level="2"&gt;</RT-code>: Collects all <RT-code>&lt;h2&gt;</RT-code> elements until it encounters the next <RT-code>&lt;h1&gt;</RT-code>. Best for chapter summaries.</li>
+    </ul>
+
+    <h3>Implicit Mode (Context Aware)</h3>
+    <p>
+      If no level is specified, the TOC scans backwards to find the nearest heading (e.g., H1) and assumes you want to collect children one level deeper (e.g., H2).
+    </p>
+    <p>
+      <em>Note: Implicit mode can fail if placed before the first heading of a section (the "Halting Problem" scenario). Use explicit levels for robust results.</em>
+    </p>
+
+    <h2>The Article Container</h2>
+    <p>
+      The root element must be <RT-code>&lt;RT-article&gt;</RT-code>. This is the boundary for the pagination logic.
+    </p>
+
+    <h2>Pagination</h2>
+    <p>
+      The script <RT-code>paginate_by_element.js</RT-code> scans the article. It calculates the height of every element (including margins) and bundles them into <RT-code>&lt;RT-page&gt;</RT-code> elements.
+    </p>
+    <p>
+      <RT-neologism>Soft-Limit Pagination</RT-neologism>: The system attempts to keep headers with their following paragraphs. It will break a page early rather than stranding a header at the bottom.
+    </p>
+
+    <h1>Themes</h1>
+    <p>
+      The system supports hot-swapping themes by changing the script import in the head.
+    </p>
+    <ul>
+      <li><strong>Dark:</strong> <RT-code>style/theme_dark_gold.js</RT-code> (Default)</li>
+      <li><strong>Light:</strong> <RT-code>style/theme_light_gold.js</RT-code></li>
+    </ul>
+
+    <h1>Recovery Manifest</h1>
+    <p>
+      If memory is lost, ensure these files exist in <RT-code>style/</RT-code>:
+    </p>
+    <RT-code>
+1. style_orchestrator.js    (The brain)
+2. utility.js               (Math/Color physics)
+3. article_tech_ref.js      (Typography & CSS injection)
+4. RT_code.js               (Code block logic)
+5. RT_math.js               (MathJax wrapper)
+6. RT_term.js               (Term styling)
+7. RT_TOC.js                (Navigation generator)
+8. paginate_by_element.js   (Page splitter)
+9. page_fixed_glow.js       (Visual page container)
+    </RT-code>
+
+    <script src="style/style_orchestrator.js"></script>
+    <script>
+      window.StyleRT.style_orchestrator();
+    </script>
+  </RT-article>
+</body>
+</html>

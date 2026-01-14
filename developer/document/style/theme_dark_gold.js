@@ -91,6 +91,4 @@
     }
   };
   
-  // Auto-load for dev
-  RT.theme_dark();
 } )();
