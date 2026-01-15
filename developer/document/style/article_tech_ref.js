@@ -8,27 +8,39 @@
   const RT = window.StyleRT = window.StyleRT || {};
 
   RT.article = function() {
+    const debug = RT.debug || { log: function(){} };
+    debug.log('layout', 'RT.article starting...');
+
     RT.config = RT.config || {};
     
     // Default Configuration
     RT.config.article = {
        font_family: '"Noto Sans", "Segoe UI", "Helvetica Neue", sans-serif'
-      ,line_height: "1.8"       // Generous spacing for screen reading
-      ,font_size: "16px"        // Large base size for clarity
-      ,font_weight: 400
+      ,line_height: "1.8"       
+      ,font_size: "16px"        
+      ,font_weight: "400"       // Default (String)
       ,max_width: "820px" 
       ,margin: "0 auto"
     };
-    if (RT.config.theme && RT.config.theme.meta_is_dark === false) {
-       RT.config.article.font_weight = "600";
+
+    // SAFE THEME DETECTION
+    // If the theme is loaded and explicitly Light, bump the weight.
+    try {
+      if (RT.config.theme && RT.config.theme.meta_is_dark === false) {
+         RT.config.article.font_weight = "600";
+         debug.log('layout', 'Light theme detected: adjusting font weight to 600.');
+      }
+    } catch(e) {
+      console.warn("StyleRT: Auto-weight adjustment failed, using default.", e);
     }
 
     const conf = RT.config.article;
     const article_seq = document.querySelectorAll("RT-article");
 
-    // HURDLE
-    if(RT.debug && RT.debug.log) RT.debug.log('selector', `RT.article found ${article_seq.length} elements.`);
-    if(article_seq.length === 0) return;
+    if(article_seq.length === 0) {
+      debug.log('layout', 'No <RT-article> elements found. Exiting.');
+      return;
+    }
 
     // 1. Apply Container Styles
     article_seq.forEach( (article) =>{
@@ -40,15 +52,14 @@
       style.fontWeight = conf.font_weight;
       style.maxWidth = conf.max_width;
       style.margin = conf.margin;
-      style.padding = "0 20px"; // Mobile buffer
-      
-      // Default text color from Theme 1.0
+      style.padding = "0 20px";
       style.color = "var(--rt-content-main)";
     });
 
     // 2. Inject Child Typography
     const style_id = 'rt-article-typography';
     if (!document.getElementById(style_id)) {
+      debug.log('layout', 'Injecting CSS typography rules.');
       const style_el = document.createElement('style');
       style_el.id = style_id;
       
@@ -74,7 +85,7 @@
           text-align: center;
           margin-top: 1.0em; 
           margin-bottom: 0.5em; 
-          }
+        }
 
         rt-article h2 + h3 {
            margin-top: -0.3em; 
@@ -96,7 +107,6 @@
            margin-top: 1.2em;
            font-style: italic;
         }
-        /* Increasing Indentation (Steps of ~4 spaces) */
         rt-article h4 { margin-left: 2em; }
         rt-article h5 { margin-left: 4em; }
         rt-article h6 { margin-left: 6em; }
@@ -145,19 +155,7 @@
           background: var(--rt-surface-1);
         }
         
-        /* --- CODE & TECHNICAL --- */
-        /* Inline Code */
-        rt-article code {
-          background-color: var(--rt-surface-code);
-          color: var(--rt-syntax-keyword);
-          padding: 0.2em 0.4em;
-          border-radius: 4px;
-          font-family: "Consolas", "Monaco", monospace;
-          font-size: 0.9em;
-          border: 1px solid var(--rt-border-faint);
-        }
-        
-        /* Preformatted Blocks (if not handled by RT_code.js) */
+        /* --- TECHNICAL --- */
         rt-article pre {
            background: var(--rt-surface-code);
            padding: 1em;
@@ -170,4 +168,3 @@
     }
   };
 })();
-

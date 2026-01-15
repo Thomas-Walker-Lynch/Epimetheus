@@ -14,7 +14,7 @@ window.StyleRT.style_orchestrator = function() {
     'style/RT_term.js',          
     'style/RT_math.js',          
     'style/RT_code.js',          
-    'style/article_tech_ref_2.js',
+    'style/article_tech_ref.js',
     'style/RT_TOC.js',            
 
     // Layout & Pagination
