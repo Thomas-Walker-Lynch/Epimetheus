@@ -6,12 +6,19 @@ window.StyleRT = window.StyleRT || {};
 
 // --- DEBUG SYSTEM ---
 window.StyleRT.debug = {
-  // ENABLE 'selector', 'config', and 'error' so we aren't flying blind!
-  active_tokens: new Set([
-    'style', 'layout', 'pagination', 
-    'selector', 'config', 'error'
-  ]),
 
+  // all debug messages enabled
+/*
+  active_tokens: new Set([
+    'style', 'layout', 'pagination'
+    ,'selector', 'config', 'error'
+    ,'term'
+  ]),
+*/
+  active_tokens: new Set([
+    'term'
+  ]),
+  
   log: function(token, message) {
     if (this.active_tokens.has(token)) {
       console.log(`[StyleRT:${token}]`, message);

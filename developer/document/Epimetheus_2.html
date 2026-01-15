@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Epimetheus: The Only Primitive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+    
+    <script src="style/body_visibility_hidden.js"></script>
+    <script>
+      window.StyleRT.body_visibility_hidden();
+    </script>
+  </head>
+  <body>
+    <RT-article>
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-01-14" 
+        title="Epimetheus: The Only Primitive">
+      </RT-title>
+
+      <RT-TOC level="1"></RT-TOC>
+
+      <h1>Introduction</h1>
+
+      <p>
+        Epimetheus is a Python library for <RT-term>Higher Order Analysis</RT-term> and <RT-term>Semantic Annotation</RT-term>. A data scientist might say it is a mechanism for <RT-term>Late Binding</RT-term> of ontology, while a programmer will call it a <RT-term>type system</RT-term>.
+      </p>
+
+      <p>
+        Unlike Prometheus (Forethought), who defines what an object <em>is</em> before it is born (classic class instantiation), Epimetheus allows you to attach meaning, identity, and semantic types to objects <em>after</em> they exist.
+      </p>
+
+      <p>
+        In standard programming, the <RT-term>primitives</RT-term> are things like 
+        <RT-code>int</RT-code>, <RT-code>float</RT-code>, <RT-code>char</RT-code>, or <RT-code>boolean</RT-code>. These carry inherent meaning and behavior before you ever use them. An integer <em>is</em> a number; it must add and subtract.
+      </p>
+
+      <p>
+        Epimetheus (Afterthought) rejects this. It allows you to attach meaning (semantics) to objects after they are born. You can decide later that an object behaves like a number, or a string, or a user.
+      </p>
+
+      <p>
+        If you strip away all pre-defined types and behaviors (no ints, no strings, no classes), what is left? What is the one thing you absolutely <em>cannot</em> add later?
+      </p>
+
+      <p>
+        Distinctness.
+      </p>
+
+      <p>
+        You cannot attach meaning to an object if you cannot point to it. You cannot say "This object is a Number" if you cannot distinguish "This object" from "That object."
+      </p>
+
+      <p>
+        Thus the <RT-term>Symbol</RT-term> (the unique, persistent identity) is the most primitive data entity. Given symbols, and a Turing Machine for building structure, everything else follows. But this is not an article about constructing mathematics or computer science, rather it is about a type system, so lets not get too carried away with the grand strokes of the pen.
+      </p>
+
+      <h1>Assumptions and Terms</h1>
+
+      <h2>Given</h2>
+
+      <p>
+        As is apparent while you read this, English prose is a given. Our goal in using it is to show that the code is self-consistent without the English description. Once the formal relations are established, the prose becomes moot, as the logic permits no dependence on the medium used for its introduction. In other words, code does not read the comments to decide what to do.
+      </p>
+
+      <p>
+        The code related to this discussion is implemented in Python; however, issues with other languages are considered. One salient difference involves the fact that Python integers are bignums and are passed by reference. In some other languages, integers are considered primitives, are bounded in magnitude, and are bit-copied.
+      </p>
+
+      <h2>Symbol</h2>
+
+      <h3>Instance</h3>
+
+      <p>
+        We are given a <RT-term>symbol instance factory</RT-term>. Each time the <RT-code>make</RT-code> function on the factory interface is called, the factory returns an <RT-term>instance</RT-term> of a distinct symbol.
+      </p>
+
+      <p>
+        In some languages symbols are implemented over primitive integers, and a <RT-term-em>symbol instance</RT-term-em> will be an integer. Thus symbol instances can be copied. A common method for making a copy is to use assignment, e.g., <RT-code>x = y</RT-code>, where <RT-code>y</RT-code> is a variable holding a symbol instance. After execution of the assignment, <RT-code>x</RT-code> will hold another instance of the same symbol.
+      </p>
+
+      <p>
+        In the Python version of Epimetheus symbols are indeed implemented over integers. However, Python integers are non-primitive and thus are passed by reference. The Python Epimetheus symbol instance factory will return a reference to an integer, not the base integer, as the <RT-term-em>instance</RT-term-em>. Assignment will then copy the reference. Thus this reference is the <RT-term-em>symbol instance</RT-term-em> rather than the integer the symbol is based on.
+      </p>
+
+      <p>
+        In Epimetheus, we use a dictionary to give a symbol a name. The names need not meet the requirements imposed on a <RT-term-em>symbol instance</RT-term-em>, but it can be confusing when they don't. This is avoided in other symbol systems by implementing symbols over character strings, and using the character string as both the name and the <RT-term-em>instance</RT-term-em>.
+      </p>
+
+      <h2>Required Properties</h2>
+
+      <p>
+        Any two, or by transitivity, any number of, symbol instances can be compared for equality, say <RT-code>x == y</RT-code>. A comparison between symbol instances will always return <RT-code>True</RT-code> or <RT-code>False</RT-code>.
+      </p>
+
+      <p>
+        A symbol instance newly minted using the given symbol factory <RT-code>make</RT-code> function is said to <RT-term>come direct from the factory</RT-term>. A symbol instance direct from the factory is also called an <RT-term>original symbol</RT-term>.
+      </p>
+
+      <p>
+        Equality over symbol instances is an equivalence relation: <RT-code>x == x</RT-code> is True; <RT-code>x == y</RT-code> implies <RT-code>y == x</RT-code>; and if <RT-code>x == y</RT-code> and <RT-code>y == z</RT-code> then <RT-code>x == z</RT-code>.
+      </p>
+
+      <p>
+        Any two symbol instances returned directly from the factory using two different <RT-code>make</RT-code> calls will always equality compare to be <RT-code>False</RT-code>. In other words, two distinct <RT-neologism>originals</RT-neologism> will always be not equal.
+      </p>
+
+      <p>
+        Given an <RT-neologism-em>original</RT-neologism-em>, all copies stemming from it will be equal to each other and to the original. By <RT-neologism>stemming from</RT-neologism> we mean to include all direct copies and copies of copies.
+      </p>
+
+      <p>
+        Given any two originals, say <var>A</var> and <var>B</var>, we know that <var>A</var> is not equal to <var>B</var>, as discussed above. Note also that <var>A</var> is not equal to any copy <RT-neologism-em>stemming from</RT-neologism-em> <var>B</var>, and <var>B</var> is not equal to any copy <RT-neologism-em>stemming from</RT-neologism-em> <var>A</var>.
+      </p>
+
+      <p>
+        Though symbol instances are integer-like in that copy and equality compare can be used with them, symbol instances are disallowed from being used with other integer operators. Symbols cannot be compared for greater-than or less-than; they cannot be incremented, added, nor subtracted, etc.
+      </p>
+
+
+      <h2>What <em>is</em> a Symbol?</h2>
+
+      <p>
+        Only symbol instances exist at runtime, so a symbol is never manipulated directly.
+      </p>
+
+      <p>
+        Define a relation <var>~</var> over instances by <RT-code>x ~ y</RT-code> iff <RT-code>x == y</RT-code>. Since <RT-code>==</RT-code> is an equivalence relation, this partitions instances into equivalence classes. Each such equivalence class is a <RT-term-em>Symbol</RT-em>.
+      </p>
+
+      <p>
+        The factory’s <RT-code>make</RT-code> returns an <RT-neologism-em>original</RT-neologism-em> <RT-term-em>instance</RT-term> that is not equal to any other <RT-neologism-em>original</RT-neologism-em>. All copies <RT-neologism-em>stemming from</RT-neologism-em> an <RT-neologism-em>original</RT-neologism-em> remain in the same equivalence class. Therefore any <RT-term-em>instance</RT-term> in the class can represent the symbol, and we may choose any one <RT-term-em>instance</RT-term> as the symbol’s name (a canonical representative), or we could use a dictionary, and use, say, the <RT-neologism-em>original</RT-neologism-em> <RT-term-em>instance</RT-term>, to lookup a string as a name, among other possibilities.
+      </p>
+
+      <h3>Distinctness Across Contexts</h3>
+      <p>
+        If a symbol persists across contexts (such as across scopes or processes), it must remain distinct from all other symbols as it enters those new environments.
+      </p>
+
+      <p>
+        In this implementation, we meet this constraint by utilizing a global <RT-term-em>symbol instance factory</RT-term> and by explicitly disallowing a symbol from being employed outside the process of its creation. As a means of enforcement, there are no permitted methods to serialize a symbol to a string, nor to output one to a console or stream.
+      </p>
+
+      <p>
+        These constraints do not apply to symbol names, which are text strings. However, a symbol cannot be recovered from its name; the name is a label, not a reconstruction key.
+      </p>
+
+      <h2>Identity and Entity</h2>
+      <p>
+        We distinguish between the handle and the state to ensure the logic remains self-consistent. The <RT-term-em>Instance</RT-term> is the unique symbol returned by the factory; it serves as the persistent handle for an <RT-neologism>entity</RT-neologism>.
+      </p>
+
+      <p>
+        The <RT-neologism-em>Identity</RT-neologism-em> is the memory selectively bound to an interface to provide state. When an <RT-term-em>instance</RT-term> is associated with an <RT-neologism-em>identity</RT-neologism-em> through a shared interface, they constitute a separate <RT-neologism-em>entity</RT-neologism-em>.
+      </p>
+
+      <h2>Tape</h2>
+
+      <p>
+        In the TTCA, we gave a formal definition for a <RT-term>tape</RT-term>. A tape is an ordered sequence of cells with a leftmost cell, zero or more interior cells, and a rightmost cell. If the tape is infinite, then there is no rightmost cell. The original Turing Machine tape is a <RT-term>symbol tape</RT-term> due to each cell of the tape holding exactly one symbol. The TTCA tape generalizes this by permitting a cell to hold any object.
+      </p>
+
+      <p>
+        If a tape is treated as nothing more than its cells, then deleting the last cell causes the tape to no longer exist. In a system that has a higher level structure that preserves the tape as a distinct <RT-neologism>entity</RT-neologism>, deleting the last cell produces an empty tape that is said to have zero cells.
+      </p>
+
+      <blockquote>
+        Consider a web browser. When the last tab is closed, the window disappears, forcing the user to create a new window to continue. Some users don't like this behavior, and would prefer that the window to remain as an empty canvas. Then a mistaken close could be undone by selecting 'reopen closed tab', without having to relaunch the browser and resettle the new window into the workspace.
+      </blockquote>
+
+      <p>
+        The <RT-term-em>tape</RT-term> abstraction is particularly expressive in Python, as the language utilizes object references and permits lists to hold objects of any type. Once data within a container is modeled as a <RT-term-em>tape</RT-term>, structures such as lists, arrays, token streams, argument lists, and sequences all share the same abstract model.
+      </p>
+
+
+      <h2>Path</h2>
+
+      <p>The term <RT-neologism>path</RT-neologism> is an ontological alias for <RT-term-em>tape</RT-term>. What we mean by 'ontological' is that when using the term <RT-neologism-em>path</RT-neologism-em> to describe a <RT-term-em>tape</RT-term>, we pick up a particular way of looking at tapes, and a new nomenclature.</p>
+
+      <p>
+        The leftmost cell in a <RT-neologism-em>path</RT-neologism-em> is called the <RT-neologism>destination</RT-neologism>. All cells of the <RT-neologism-em>path</RT-neologism-em> to the right of the <RT-neologism-em>destination</RT-neologism-em> cell are called <RT-neologism>the way</RT-neologism>.
+        If we were to drop the leftmost cell from the <RT-term-em>tape</RT-term>, then we would find "<RT-neologism-em>the way</RT-neologism-em>," if it exists, to be another <RT-term-em>tape</RT-term>. Hence a <RT-neologism-em>path</RT-neologism-em> can be thought of as a pair, (<RT-neologism-em>destination</RT-neologism-em> , <RT-neologism-em>the way</RT-neologism-em>).
+      </p>
+
+      <p>
+        The reader might have expected the <RT-neologism-em>path</RT-neologism-em> to go from left to right, with the <RT-neologism-em>destination</RT-neologism-em> on the far right. This would be natural because we read characters from a written page going from right to left. However, such a definition would run into a problem, as left-to-right traversal might not ever end.
+      </p>
+
+      <blockquote>
+        Think about it this way: you are sitting in a pub of an inn, and a stranger walks in. Though you know the stranger's current <RT-neologism-em>destination</RT-neologism-em>, you might not know where he came from.
+      </blockquote>
+
+      <h3>Discrete Function</h3>
+      <p>
+        Now consider another <RT-term-em>tape</RT-term> called F, where each cell holds a <RT-neologism-em>path</RT-neologism-em>. As a <RT-neologism-em>path</RT-neologism-em> is a special kind of <RT-term-em>tape</RT-term>, this new structure, F, is a <RT-term-em>tape</RT-term> of <RT-term-em>tapes</RT-term>.
+      </p>
+
+      <p>
+        Now suppose we traverse this new <RT-term-em>tape</RT-term> while examining the <RT-neologism-em>paths</RT-neologism-em> as (<RT-neologism-em>destination</RT-neologism-em> , <RT-neologism-em>the way</RT-neologism-em>) pairs. If we find that all equal <RT-neologism-em>ways</RT-neologism-em> lead to the same <RT-neologism-em>destination</RT-neologism-em>, then <RT-term-em>tape</RT-term> F is a <RT-term>discrete function</RT-term>.
+      </p>
+
+      <RT-math>
+        destination = f(way)
+      </RT-math>
+
+      <p>
+        This notation is valid because the same <RT-neologism-em>way</RT-neologism-em> always leads to the same <RT-neologism-em>destination</RT-neologism-em>.
+      </p>
+
+      <script src="style/style_orchestrator.js"></script>
+      <script>
+        window.StyleRT.style_orchestrator();
+      </script>
+    </RT-article>
+  </body>
+</html>

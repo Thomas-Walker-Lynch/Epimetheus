@@ -50,33 +50,74 @@
     </p>
 
     <h2>Terminology</h2>
+
     <h3>Conventional Terms</h3>
     <p>
-      Use <RT-code>&lt;RT-term&gt;</RT-code> for standard, industry-accepted technical terms.
+      Use <RT-code>&lt;RT-term&gt;</RT-code> for standard, industry accepted technical terms. The system decorates only the first occurrence of each unique term so that the first appearance functions as a definition point, and later appearances do not overload the page with styling.
     </p>
+
     <RT-code>
 The <RT-term>Singleton Pattern</RT-term> restricts instantiation...
     </RT-code>
+
     <p>
       <em>Renders as:</em> The <RT-term>Singleton Pattern</RT-term> restricts instantiation...
     </p>
 
-    <h3>Neologisms (Novel Concepts)</h3>
+    <h3>Neologisms</h3>
     <p>
-      Use <RT-code>&lt;RT-neologism&gt;</RT-code> for terms invented specifically for the current document or project. This visually distinguishes "jargon you should know" from "jargon we just made up."
+      Use <RT-code>&lt;RT-neologism&gt;</RT-code> for terms invented specifically for the current document or project. Neologisms are styled more strongly than conventional terms, visually distinguishing "jargon you should know" from "jargon we just made up."
     </p>
+
     <RT-code>
-We define the <RT-neologism>Hyper-Tape</RT-neologism> as a construct...
+We define the <RT-neologism>Hyper Tape</RT-neologism> as a construct...
     </RT-code>
+
     <p>
-      <em>Renders as:</em> We define the <RT-neologism>Hyper-Tape</RT-neologism> as a construct...
+      <em>Renders as:</em> We define the <RT-neologism>Hyper Tape</RT-neologism> as a construct...
+    </p>
+
+    <h3>First Occurrence Rule</h3>
+    <p>
+      The term system is intentionally conservative. For the tags <RT-code>&lt;RT-term&gt;</RT-code> and <RT-code>&lt;RT-neologism&gt;</RT-code>, only the first occurrence of a unique term is decorated. Subsequent mentions are rendered as normal prose.
+    </p>
+
+    <p>
+      Uniqueness is tracked by normalizing the term text (trimmed, then lowercased). This means that <RT-code>Symbol</RT-code> and <RT-code>symbol</RT-code> count as the same term.
+    </p>
+
+    <h3>Forced Emphasis Variants</h3>
+    <p>
+      Sometimes a later mention of a term should be emphasized again. For that purpose, the system provides explicit emphasis tags:
+    </p>
+
+    <ul>
+      <li><RT-code>&lt;RT-term-em&gt;</RT-code></li>
+      <li><RT-code>&lt;RT-neologism-em&gt;</RT-code></li>
+    </ul>
+
+    <p>
+      These variants are always decorated, even if the term appeared earlier.
+    </p>
+
+    <h3>Automatic Definition Anchors</h3>
+    <p>
+      For first occurrences, the term module automatically assigns an <RT-code>id</RT-code> attribute if one does not already exist. This creates stable anchors for future indexing and linking.
+    </p>
+
+    <RT-code>
+We define a <RT-term>Symbol</RT-term> as...
+    </RT-code>
+
+    <p>
+      The first occurrence will be given an id similar to <RT-code>def-symbol</RT-code>. For neologisms, an additional marker is used, for example <RT-code>def-neo-hyper-tape</RT-code>.
     </p>
 
     <h2>Technical Content</h2>
 
     <h3>Code</h3>
     <p>
-      Use <RT-code>&lt;RT-code&gt;</RT-code>. If placed inline, it acts like a span. If placed as a block (with newlines), it acts like a pre-formatted block with a theme-aware border.
+      Use <RT-code>&lt;RT-code&gt;</RT-code>. If placed inline, it acts like a span. If placed as a block (with newlines), it acts like a pre formatted block with a theme aware border.
     </p>
     
     <RT-code>
@@ -87,7 +128,7 @@ def hello():
 
     <h3>Mathematics</h3>
     <p>
-      Use <RT-code>&lt;RT-math&gt;</RT-code>. The system auto-detects if it is a block equation or inline variable and wraps it in MathJax delimiters.
+      Use <RT-code>&lt;RT-math&gt;</RT-code>. The system auto detects if it is a block equation or inline variable and wraps it in MathJax delimiters.
     </p>
     <p>
       Inline: Let <RT-math>x</RT-math> be the input.
@@ -106,7 +147,7 @@ def hello():
       Use <RT-code>&lt;RT-TOC&gt;</RT-code> to insert a generated table of contents. The tag scans the document <em>forward</em> from its current position to collect headings.
     </p>
 
-    <h3>Explicit Mode (Recommended)</h3>
+    <h3>Explicit Mode</h3>
     <p>
       Use the <RT-code>level="N"</RT-code> attribute to target a specific heading depth.
     </p>
@@ -115,14 +156,13 @@ def hello():
       <li><RT-code>&lt;RT-TOC level="2"&gt;</RT-code>: Collects all <RT-code>&lt;h2&gt;</RT-code> elements until it encounters the next <RT-code>&lt;h1&gt;</RT-code>. Best for chapter summaries.</li>
     </ul>
 
-    <h3>Implicit Mode (Context Aware)</h3>
+    <h3>Implicit Mode</h3>
     <p>
-      If no level is specified, the TOC scans backwards to find the nearest heading (e.g., H1) and assumes you want to collect children one level deeper (e.g., H2).
+      If no level is specified, the TOC scans backwards to find the nearest heading (for example H1) and assumes you want to collect children one level deeper (for example H2).
     </p>
     <p>
-      <em>Note: Implicit mode can fail if placed before the first heading of a section (the "Halting Problem" scenario). Use explicit levels for robust results.</em>
+      <em>Note: Implicit mode can fail if placed before the first heading of a section. Use explicit levels for robust results.</em>
     </p>
-
 
     <h2>The Title Block</h2>
     <p>
@@ -144,8 +184,9 @@ def hello():
         date="2026-01-14">
       </RT-title>
     </RT-code>
+
     <p>
-      <em>Renders as:</em> A centered, high-contrast H1 followed by a serif-styled metadata row containing the author and date, separated by an em-dash.
+      <em>Renders as:</em> A centered, high contrast H1 followed by a serif styled metadata row containing the author and date.
     </p>
 
     <h2>The Article Container</h2>
@@ -158,26 +199,62 @@ def hello():
       The script <RT-code>paginate_by_element.js</RT-code> scans the article. It calculates the height of every element (including margins) and bundles them into <RT-code>&lt;RT-page&gt;</RT-code> elements.
     </p>
     <p>
-      <RT-neologism>Soft-Limit Pagination</RT-neologism>: The system attempts to keep headers with their following paragraphs. It will break a page early rather than stranding a header at the bottom.
+      <RT-neologism>Soft Limit Pagination</RT-neologism>: The system attempts to keep headers with their following paragraphs. It will break a page early rather than stranding a header at the bottom.
+    </p>
+
+    <h1>Debugging</h1>
+
+    <h2>Debug Tokens</h2>
+    <p>
+      RT provides a lightweight debug logging system in <RT-code>utility.js</RT-code>. Logging is controlled by a set of active debug tokens. Each log message is assigned a token, and the message prints only if that token is enabled.
+    </p>
+
+    <p>
+      Examples of common tokens include <RT-code>style</RT-code>, <RT-code>layout</RT-code>, <RT-code>pagination</RT-code>, <RT-code>selector</RT-code>, <RT-code>config</RT-code>, and <RT-code>term</RT-code>.
+    </p>
+
+    <h2>How Logging is Gated</h2>
+    <p>
+      Normal log and warning output are gated. The methods <RT-code>debug.log(token,message)</RT-code> and <RT-code>debug.warn(token,message)</RT-code> will print only when the token exists in <RT-code>debug.active_tokens</RT-code>.
+    </p>
+
+    <p>
+      This prevents the console from being flooded during normal use, while still allowing deep visibility during development.
+    </p>
+
+    <h2>Errors are Always Printed</h2>
+    <p>
+      Errors are treated differently. The method <RT-code>debug.error(token,message)</RT-code> always prints, regardless of token state. These messages represent failures that require attention.
+    </p>
+
+    <h2>Enabling and Disabling Tokens</h2>
+    <p>
+      Tokens may be enabled or disabled in two ways: by editing the <RT-code>active_tokens</RT-code> set in <RT-code>utility.js</RT-code>, or at runtime by calling:
+    </p>
+
+    <RT-code>
+window.StyleRT.debug.enable('term')
+window.StyleRT.debug.disable('term')
+    </RT-code>
+
+    <p>
+      For example, the term system (<RT-code>RT_term.js</RT-code>) uses the <RT-code>term</RT-code> token. When that token is enabled, the module will print messages describing how terms were detected and which term definitions were assigned IDs.
     </p>
 
     <h1>Themes</h1>
     <p>
-      The system supports hot-swapping themes by changing the script import in the head.
+      The system supports hot swapping themes by changing the script import in the head.
     </p>
     <ul>
       <li><strong>Dark:</strong> <RT-code>style/theme_dark_gold.js</RT-code> (Default)</li>
       <li><strong>Light:</strong> <RT-code>style/theme_light_gold.js</RT-code></li>
     </ul>
 
-    <h1>Recovery Manifest</h1>
-    <p>
-      If memory is lost, ensure these files exist in <RT-code>style/</RT-code>:
-    </p>
+    <h1>Manifest</h1>
     <RT-code>
-1. style_orchestrator.js    (The brain)
+1. style_orchestrator.js    (Example/default footer script)
 2. utility.js               (Math/Color physics)
-3. article_tech_ref.js      (Typography & CSS injection)
+3. article_tech_ref.js      (Typography and CSS injection)
 4. RT_code.js               (Code block logic)
 5. RT_math.js               (MathJax wrapper)
 6. RT_term.js               (Term styling)
