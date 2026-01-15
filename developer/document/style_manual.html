@@ -21,8 +21,8 @@
 </head>
 <body>
 
-  <RT-title author="Gemini" date="2026-01-14" title="RT Style System: Reference Manual"></RT-title>
   <RT-article>
+    <RT-title author="Gemini" date="2026-01-14" title="RT Style System: Reference Manual"></RT-title>
 
     <RT-TOC level="1"></RT-TOC>
 
@@ -121,6 +121,31 @@ def hello():
     </p>
     <p>
       <em>Note: Implicit mode can fail if placed before the first heading of a section (the "Halting Problem" scenario). Use explicit levels for robust results.</em>
+    </p>
+
+
+    <h2>The Title Block</h2>
+    <p>
+      Use <RT-code>&lt;RT-title&gt;</RT-code> as the first element in your <RT-code>&lt;body&gt;</RT-code> (before the article container). This tag generates a standardized, styled header block with the document title and metadata.
+    </p>
+
+    <h3>Attributes</h3>
+    <ul>
+      <li><RT-code>title</RT-code> (Required): The main heading of the document.</li>
+      <li><RT-code>author</RT-code> (Optional): The author's name. Renders in a bold accent color.</li>
+      <li><RT-code>date</RT-code> (Optional): The publication or revision date.</li>
+    </ul>
+
+    <h3>Example</h3>
+    <RT-code>
+      <RT-title 
+        title="RT Style System: Reference Manual" 
+        author="Gemini" 
+        date="2026-01-14">
+      </RT-title>
+    </RT-code>
+    <p>
+      <em>Renders as:</em> A centered, high-contrast H1 followed by a serif-styled metadata row containing the author and date, separated by an em-dash.
     </p>
 
     <h2>The Article Container</h2>

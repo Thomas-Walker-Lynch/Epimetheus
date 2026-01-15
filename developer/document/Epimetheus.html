@@ -11,23 +11,61 @@
     </script>
   </head>
   <body>
-    <RT-article>  
+    <RT-article>
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-01-14" 
+        title="Epimetheus: The Only Primitive">
+      </RT-title>
 
-      <h1> What is it </h1>
+      <RT-TOC level="1"></RT-TOC>
 
+      <h1>Introduction</h1>
 
-      <p>Epimetheus is a Python library for <RT-term>Higher Order Analysis</RT-term> and <RT-term>Semantic Annotation</RT-term>.  A computer scientists might say it is a mechanism for <RT-term>Late Binding</RT-term> of ontology, while a programmer will call it a <RT-term>type system</RT-term>.</p>
+      <p>
+        Epimetheus is a Python library for <RT-term>Higher Order Analysis</RT-term> and <RT-term>Semantic Annotation</RT-term>. A data scientist might say it is a mechanism for <RT-term>Late Binding</RT-term> of ontology, while a programmer will call it a <RT-term>type system</RT-term>.
+      </p>
 
-      <p>Unlike Prometheus (Forethought), who defines what an object /is/ before it is born (classic class instantiation), Epimetheus allows you to attach meaning, identity, and semantic types to objects /after/ they exist.</p>
+      <p>
+        Unlike Prometheus (Forethought), who defines what an object <em>is</em> before it is born (classic class instantiation), Epimetheus allows you to attach meaning, identity, and semantic types to objects <em>after</em> they exist.
+      </p>
 
+      <p>
+        In standard programming, the <RT-term>primitives</RT-term> are things like 
+        <RT-code>int</RT-code>, <RT-code>float</RT-code>, <RT-code>char</RT-code>, or <RT-code>boolean</RT-code>. These carry inherent meaning and behavior before you ever use them. An integer <em>is</em> a number; it must add and subtract.
+      </p>
+
+      <p>
+        Epimetheus (Afterthought) rejects this. It allows you to attach meaning (semantics) to objects after they are born. You can decide later that an object behaves like a number, or a string, or a user.
+      </p>
+
+      <p>
+        If you strip away all pre-defined types and behaviors (no ints, no strings, no classes), what is left? What is the one thing you absolutely <em>cannot</em> add later?
+      </p>
+
+      <p>
+        <RT-neologism>Distinctness</RT-neologism>.
+      </p>
+
+      <p>
+        You cannot attach meaning to an object if you cannot point to it. You cannot say "This object is a Number" if you cannot distinguish "This object" from "That object."
+      </p>
+
+      <p>
+        Therefore, the <RT-term>Symbol</RT-term> (the unique, persistent identity) is the <RT-neologism>Only Primitive</RT-neologism>. It is the atomic unit of the universe.  Everything else—semantics, types, relationships, values, are merely metadata layered on top of that primitive identity.
+      </p>
 
       <h1>Assumptions and Terms</h1>
 
-      <h2>Given</h1>
-      <p>The English language is a given, apparently. Though once we have English, it seems a lot of the rest of this is moot.
-       </p>
+      <h2>Given</h2>
+
       <p>
-        The code related to this discussion is implemented in Python, however issues with other languages are considered. On salient difference that is considered is that Python integers are bignums are passed by reference. In some other languages integers are considered primitives, are bounded and bit copied.
+        As is apparent while you read this, English prose is a given. The goal in making use of prose is to explain that the code is internally consistent without the English description.  Once the formal relations are established, the prose is no longer needed, as the logic permits no dependence on the medium used for its introduction. In other words, code does not read the comments to decide what to do.
+      </p>
+
+      
+      <p>
+        The code related to this discussion is implemented in Python; however, issues with other languages are considered. One salient difference involves the fact that Python integers are bignums and are passed by reference. In some other languages, integers are considered primitives, are bounded in magnitude, and are bit-copied.
       </p>
 
       <h2>Symbol</h2>
@@ -35,22 +73,30 @@
       <h3>Instance</h3>
 
       <p>
-        We are given a symbol instance factory. Each time the <RT-code>make</RT-code> function on the factory interface is called, the factory returns an instance of a distinct symbol.
+        We are given a <RT-term>symbol instance</RT-term> factory. Each time the <RT-code>make</RT-code> function on the factory interface is called, the factory returns an instance of a distinct symbol.
       </p>
 
       <p>
-        A symbol instance may be copied. A common method for making a copy in many languages is to use assignment, e.g., <RT-code>x = y</RT-code>, where <RT-code>y</RT-code> is a variable holding a symbol instance. After execution of the assignment, <RT-code>x</RT-code> will hold another instance of the same symbol. (Note that in Python an assignment will copy a reference, and the symbol itself will not be copied.)
+        In some languages symbols are implemented over primitive integers, and a symbol instance will be an integer. Thus symbol instances can be copied. A common method for making a copy is to use assignment, e.g., <RT-code>x = y</RT-code>, where <RT-code>y</RT-code> is a variable holding a symbol instance. After execution of the assignment, <RT-code>x</RT-code> will hold another instance of the same symbol.
       </p>
+
+      <p>
+        In the Python version of Epimetheus symbols are indeed implemented over integers.  However, Python integers are non-primitive and thus are passed by reference. The Python Epimetheus symbol instance factory will return a reference to an integer, not the base integer, as the symbol instance. Assignment will then copy the reference. Thus this reference is the symbol instance rather than the integer the symbol is based on.
+      </p>
+
+      <p>
+        In Epimetheus, we use a dictionary to give a symbol a name. The names need not meet the requirements imposed on a symbol instance, but it can be confusing when they don't. This is avoided in other symbol systems by implementing symbols over character strings, and using the character string as both the name and the instance.
+       </p>
+
+      <h2>Required Properties</h2>
 
       <p>
         Any two, or by transitivity, any number of, symbol instances can be compared for equality, say <RT-code>x == y</RT-code>. A comparison between symbol instances will always return <RT-code>True</RT-code> or <RT-code>False</RT-code>.
       </p>
 
       <p>
-        A symbol instance newly minted using the given symbol factory <RT-code>make</RT-code> function is said to come direct from the factory. Such a symbol is also called an <RT-neologism>original</RT-neologism>.
+        A symbol instance newly minted using the given symbol factory <RT-code>make</RT-code> function is said to <RT-term>come direct from the factory</RT-term>. A symbol instance direct from the factory is also called an <RT-term>original symbol</RT-term>.
       </p>
-
-      <h2>Required Properties</h2>
 
       <p>
         Equality over symbol instances is an equivalence relation: <RT-code>x == x</RT-code> is True; <RT-code>x == y</RT-code> implies <RT-code>y == x</RT-code>; and if <RT-code>x == y</RT-code> and <RT-code>y == z</RT-code> then <RT-code>x == z</RT-code>.
@@ -61,7 +107,7 @@
       </p>
 
       <p>
-        Given an original, all copies stemming from it will be equal to each other and to the original. By <RT-neologism>stemming</RT-neologism> we mean to include all direct copies and copies of copies.
+        Given an original, all copies stemming from it will be equal to each other and to the original. By <RT-neologism>stemming from</RT-neologism> we mean to include all direct copies and copies of copies.
       </p>
 
       <p>
@@ -84,51 +130,83 @@
       </p>
 
       <p>
-        The factory’s <RT-code>make</RT-code> returns an original instance that is not equal to any other original. All copies stemming from an original remain in the same equivalence class. Therefore any instance in the class can represent the symbol, and we may choose any one instance as the symbol’s name (a canonical representative), or we could use a dictionary, and use, say, the original instance, to lookup a string as a name.
+        The factory’s <RT-code>make</RT-code> returns an original instance that is not equal to any other original. All copies stemming from an original remain in the same equivalence class. Therefore any instance in the class can represent the symbol, and we may choose any one instance as the symbol’s name (a canonical representative), or we could use a dictionary, and use, say, the original instance, to lookup a string as a name, among other possibilities.
       </p>
-
 
       <h3>Distinctness Across Contexts</h3>
       <p>
-        If a symbol persists across contexts, such as across scopes or processes, it must remain distinct from all other symbols as it enters into those new processes or contexts.
+        If a symbol persists across contexts (such as across scopes or processes), it must remain distinct from all other symbols as it enters those new environments.
       </p>
 
       <p>
-        In this implementation, we meet this constraint by using a global symbol factory and by explicitly disallowing a symbol from being used outside the process it was made in.
+        In this implementation, we meet this constraint by utilizing a global symbol instance factory and by explicitly disallowing a symbol from being employed outside the process of its creation. As a means of enforcement, there are no permitted methods to serialize a symbol to a string, nor to output one to a console or stream.
+      </p>
+
+      <p>
+        These constraints do not apply to symbol names, which are text strings. However, a symbol cannot be recovered from its name; the name is a label, not a reconstruction key.
       </p>
 
       <h2>Object</h2>
-      <h3>Definition</h3>
       <p>
-        The term "Python object" refers to anything that can or could appear in Python code and could be associated with a symbol. This includes symbols themselves.
+        The term "Python object" refers to anything that can or could appear in legal Python code and could be associated with a symbol. This includes symbols themselves.
       </p>
 
       <p>
         A symbol is associated with an object using a Python dictionary. The symbol is the key, and the object is that thing which is "looked up" via said key.
+        One such example is the symbol name dictionary mentioned in the prior section.
       </p>
+
+      <h2>Tape</h2>
+
+      <p>
+        In the TTCA, we gave a formal definition for a <RT-term>tape</RT-term>. A tape is an ordered sequence of cells with a leftmost cell, zero or more interior cells, and a rightmost cell. If the tape is infinite, then there is no rightmost cell. The original Turing Machine tape is a <RT-term>symbol tape</RT-term> due to each cell of the tape holding exactly one symbol. The TTCA tape generalizes this by permitting a cell to hold any object.
+      </p>
+
+      <p>
+        If a tape is treated as nothing more than its cells, then deleting the last cell causes the tape to no longer exist. In a system that has a higher level structure that preserves the tape as a distinct entity, deleting the last cell produces an empty tape that is said to have zero cells.
+      </p>
+
+      <blockquote>
+        Consider a web browser. When the last tab is closed, the window disappears, forcing the user to create a new window to continue. Some users don't like this behavior, and would prefer that the window to remain as an empty canvas. Then a mistaken close could be undone by selecting 'reopen closed tab', without having to relaunch the browser and resettle the new window into the workspace.
+      </blockquote>
+
+      <p>
+        The tape abstraction is particularly expressive in Python, as the language utilizes object references and permits lists to hold objects of any type. Once data within a container is modeled as a tape, structures such as lists, arrays, token streams, argument lists, and sequences all share the same abstract model.
+      </p>
+
 
       <h2>Path</h2>
-      <h3>Individual Path</h3>
+
+      <p>The term <RT-neologism>path</RT-neologism> is an ontological alias for <RT-term>tape</RT-term>. What we mean by 'ontological' is that when using the term <RT-term>path</RT-term> to describe a tape, we pick up a particular way of looking at tapes, and a new nomenclature.</p>
+
       <p>
-        In the TTCA, we provided a formal definition for a "tape." A tape has a leftmost cell, one or more "in-between" cells, and a rightmost cell.  A "path" is a special case of a tape with additional constraints.
+        The leftmost cell in a path is called the     <RT-neologism>destination</RT-neologism>.  All cells of the path to the right of the destination cell are called <RT-neologism>the way</RT-neologism>.
+        If we were to drop the leftmost cell from the tape, then we would find "the way," if it exists, to be another tape. Hence a path can be thought of as a pair, (destination ,way).
       </p>
 
       <p>
-        Each cell of a path holds a symbol. The leftmost cell is called the 
-        <strong>destination</strong>. The reader might have expected the path to go from left to right, but such a definition would run into a problem, as left-to-right traversal might not ever end.
+        The reader might have expected the path to go from left to right, with the destination on the far right. This would be natural because we read characters from a written page going from right to left.  However, such a definition would run into a problem, as left-to-right traversal might not ever end.
       </p>
 
       <blockquote>
         Think about it this way: you are sitting in a pub of an inn, and a stranger walks in. Though you know the stranger's current destination, you might not know where he came from.
       </blockquote>
 
-      <p>
-        All cells of the path to the right of the destination cell are called "the way." If we were to drop the leftmost cell from the tape, then we would find "the way," if it exists, to be another tape.
-      </p>
-
       <h3>Discrete Function</h3>
       <p>
-        Consider another tape where each cell holds a path. If we compare all paths on said tape and find that no two identical "ways" lead to different destinations, we call said tape a <strong>discrete function</strong>.
+        Now consider another tape called F, where each cell holds a path. As a path is a special kind of tape, this new structure, F, is a tape of tapes.
+      </p>
+
+      <p>
+        Now suppose we traverse this new tape while examining the paths as (destination ,way) pairs. If we find that all eual ways lead to
+        the same destination, then tape F is a discrete Function.  We say it is discrete because we F is defined on a tape of discrete cells, and it is based on discrete symbols.  We say it is a function due to having this property that all paths with identical ways lead to identical destination.
+        
+
+
+        compare all the paths on this 
+        Suppose that when we 
+
+        If we compare all paths on said tape and find that no two paths have the  same  "ways" that lead to different destinations, we call said tape a <strong>discrete function</strong>.
       </p>
 
       <RT-math>
@@ -138,6 +216,8 @@
       <p>
         This notation is possible because the same way always leads to the given destination.
       </p>
+
+
 
       <script src="style/style_orchestrator.js"></script>
       <script>
