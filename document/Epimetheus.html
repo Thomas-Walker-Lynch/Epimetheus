@@ -135,11 +135,11 @@
 
       <h3>Distinctness Across Contexts</h3>
       <p>
-        If a <RT-term>symbol</RT-term> persists across contexts (such as across scopes or processes), it must remain distinct from all other <RT-term>symbol</RT-term>s as it enters those new environments.
+        If a <RT-term>symbol</RT-term> persists across contexts (such as across scopes or processes), it must remain distinct from all other <RT-term>symbol</RT-term>s in its new context.
       </p>
 
       <p>
-        In this implementation, we meet this constraint by utilizing a global <RT-term>symbol instance</RT-term> factory and by explicitly disallowing a <RT-term>symbol</RT-term> from being employed outside the process of its creation. As a means of enforcement, there are no permitted methods to serialize a <RT-term>symbol</RT-term> to a string, nor to output one to a console or stream.
+        In this implementation, we meet this requirement by utilizing a global <RT-term>symbol instance</RT-term> factory and by explicitly disallowing a <RT-term>symbol</RT-term> from being employed outside the process of its creation. As a means of enforcement, there are no permitted methods to serialize a <RT-term>symbol</RT-term> to a string, nor to output one to a console or stream.
       </p>
 
       <p>
@@ -179,7 +179,7 @@
 
 
       <p>
-        The <RT-term>tape</RT-term> abstraction is particularly expressive in the Python context, as the language utilizes object references and permits lists to hold objects of any type. Once data within a container is modeled as a <RT-term>tape</RT-term>, structures such as lists, arrays, token streams, argument lists, and sequences all share the same abstract model.
+        The <RT-term>tape</RT-term> abstraction is particularly expressive in the Python context, as the language utilizes object references and permits lists to hold objects of any type. Once data within a container is modeled as a <RT-term>tape</RT-term>, structures such as lists, arrays, token streams, argument lists, sequences, and traversal paths through graphs, all share the same abstract model.
       </p>
 
 
@@ -216,7 +216,7 @@
       </p>
 
       <p>
-        Thus a function is more restricted than a <RT-term>tape</RT-term> of paths, and due to this restriction it is possible to adopt the following notation, where a <RT-term>destination</RT-term> is said to be determined by, a function of, the <RT-term>way</RT-term>:
+        Thus a function is more restricted than a <RT-term>tape</RT-term> of paths, and due to this restriction it is possible to adopt the following notation, where a <RT-term>destination</RT-term> is said to be determined by, i.e. be a function of, the <RT-term>way</RT-term>:
       </p>
 
       <RT-math>
@@ -224,7 +224,7 @@
       </RT-math>
 
       <p>
-        That the same <RT-term>way</RT-term> always leads to the same destination fits our common experience. If we ever followed the same way twice and landed in a different destination we would think ourselves to be in a Sci-Fi movie. It is also intuitive to us that the function restrictions do not exclude the possibility that multiple <RT-term>way</RT-term>s can lead to the same destination. Because we often compute things that are related to our daily experience it is not surprising that this is a very common pattern. And this is not a coincidence, this is the reason functions are defined as they are.
+        That the same <RT-term>way</RT-term> always leads to the same destination fits our common experience. If a person followed the same way twice and landed in different destinations. that person might think himself/herself to be in a Sci-Fi movie. It is also intuitive to us that the function restrictions do not exclude the possibility that multiple <RT-term>way</RT-term>s can lead to the same destination. Because we often compute things that are related to our daily experience it is not surprising that this is a very common pattern. And this is not a coincidence, this is the reason functions are defined as they are.
       </p>
 
       <script src="style/style_orchestrator.js"></script>
