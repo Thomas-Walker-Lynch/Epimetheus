@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>02 - The First Order Tape Machine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+    
+    <script src="style/body_visibility_hidden.js"></script>
+    <script>
+      window.StyleRT.body_visibility_hidden();
+    </script>
+  </head>
+  <body>
+    <RT-article>
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-02-03" 
+        title="02 - The First Order Tape Machine">
+      </RT-title>
+
+      <RT-TOC level="1"></RT-TOC>
+
+      <h1>Introduction</h1>
+
+      <p>
+        The <RT-term>First Order Tape Machine</RT-term> (TM) is the foundational mechanism for sequence manipulation. It is a concrete implementation of the <RT-term>Tape Machine</RT-term> abstraction defined in the TTCA.
+      </p>
+
+      <p>
+        While modern programming languages offer various containers (Lists, Arrays, Vectors), the <RT-term>First Order TM</RT-term> unifies them under a single <RT-term>interface</RT-term> that emphasizes <RT-term>positional state</RT-term>. Unlike a standard iterator which consumes data, a TM persists. Unlike a raw array which is stateless, a TM maintains a <RT-term>head</RT-term>.
+      </p>
+
+      <h1>Architecture</h1>
+
+      <h2>The Hybrid Model</h2>
+      <p>
+        For maximum performance in high-frequency loops, the First Order TM is implemented using a <RT-neologism>Direct Execution</RT-neologism> architecture.
+      </p>
+
+      <ul>
+        <li><strong>Inner Loop (C-Extension):</strong> The core operations&mdash;reading, stepping, and writing&mdash;are implemented in C. This code directly manipulates the memory pointers of the underlying Python List, avoiding interpreter overhead.</li>
+        <li><strong>Outer Loop (Python Wrapper):</strong> The Python layer handles initialization and interface compliance.</li>
+      </ul>
+
+      <p>
+        This hybrid approach allows the TM to execute simple steps like <RT-code>s()</RT-code> (step right) in nanoseconds, comparable to native pointer arithmetic in compiled languages.
+      </p>
+
+      <h2>Entanglement Safety</h2>
+      <p>
+        A critical feature of the Epimetheus TM is <RT-term>Entanglement</RT-term>. Multiple TMs can operate on the same underlying tape memory simultaneously. This is efficient, but dangerous: if one machine deletes a cell that another machine is looking at, the system could crash or corrupt state.
+      </p>
+
+      <p>
+        To prevent this, the TM implements an <RT-neologism>Entanglement Catalog</RT-neologism> in the C layer.
+      </p>
+
+      <RT-math>
+        \text{Safe}(op) \iff \forall \text{peer} \in \text{Catalog}, \text{Head}(\text{peer}) \notin \text{VictimRange}(op)
+      </RT-math>
+
+      <p>
+        Before any destructive operation (like delete), the machine checks the catalog. If any peer's head is currently positioned on a cell scheduled for deletion, the operation is blocked with a <RT-code>RuntimeError</RT-code>.
+      </p>
+
+      <h1>Interface</h1>
+
+      <h2>Movement</h2>
+      <p>
+        The TM maintains a <RT-term>Head</RT-term> index. Movement is relative.
+      </p>
+
+      <ul>
+        <li><RT-code>s()</RT-code>: Step Right (increment head).</li>
+        <li><RT-code>sn(n)</RT-code>: Step Right by <RT-math>n</RT-math>.</li>
+        <li><RT-code>ls()</RT-code>: Step Left (decrement head).</li>
+        <li><RT-code>lsn(n)</RT-code>: Step Left by <RT-math>n</RT-math>.</li>
+      </ul>
+
+      <h2>Read / Write</h2>
+      <p>
+        Data access occurs at the current head position.
+      </p>
+
+      <RT-code>
+# Read current cell
+val = tm.r()
+
+# Bulk read next 3 cells
+chunk = tm.rn(3)
+
+# Write to current cell
+tm.w(42)
+
+# Bulk write (overwrite sequence)
+tm.wn([10, 20, 30])
+      </RT-code>
+
+      <h2>Allocation</h2>
+      <p>
+        New cells can be created at the boundaries.
+      </p>
+      <ul>
+        <li><RT-code>aR(val)</RT-code>: Append Right (standard append).</li>
+        <li><RT-code>aL(val)</RT-code>: Append Left (prepend). Note that this operation shifts the indices of all existing cells. The TM automatically adjusts its own head to maintain logical stability, but peers may experience <RT-neologism>Index Drift</RT-neologism>.</li>
+      </ul>
+
+      <h2>Deletion</h2>
+      <p>
+        Deletion is the only operation restricted by Entanglement Safety.
+      </p>
+
+      <h3>Delete Current (d)</h3>
+      <p>
+        <RT-code>d()</RT-code> removes the cell currently under the head. After deletion, the head index remains unchanged, but it now points to the <em>next</em> cell in the sequence (the one that shifted into the slot).
+      </p>
+
+      <h3>Delete Neighbor (esd)</h3>
+      <p>
+        <RT-code>esd()</RT-code> (Entangle, Step, Delete) removes the cell immediately to the <em>right</em> of the head. This is the primitive operation for Singly Linked Tapes, but is offered on the First Order TM for symmetry.
+      </p>
+
+      <h1>Implementation Detail</h1>
+
+      <h2>The C Module</h2>
+      <p>
+        The C module <RT-code>TM_module.c</RT-code> defines the <RT-code>FastTM</RT-code> struct.
+      </p>
+
+      <RT-code>
+typedef struct {
+  PyObject_HEAD
+  PyObject* tape_obj;      /* Shared Python List */
+  PyObject* peer_list;     /* Shared WeakRef List */
+  Py_ssize_t head;         /* C-Level Integer */
+  PyObject* weakreflist;   /* Garbage Collection Support */
+} FastTM;
+      </RT-code>
+
+      <p>
+        By keeping the <RT-code>head</RT-code> as a native C integer <RT-code>Py_ssize_t</RT-code>, arithmetic operations avoid the boxing/unboxing cost of Python Integers.
+      </p>
+
+      <script src="style/style_orchestrator.js"></script>
+      <script>
+        window.StyleRT.style_orchestrator();
+      </script>
+    </RT-article>
+  </body>
+</html>

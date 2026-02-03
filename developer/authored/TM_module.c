@@ -7,6 +7,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "structmember.h"
+#include <stddef.h> /* For offsetof */
 
 /* ========================================================= */
 /* TYPE DEFINITION                                           */
@@ -17,12 +18,18 @@ typedef struct {
   PyObject* tape_obj;      /* The Python List (Shared) */
   PyObject* peer_list;     /* List of WeakRefs (Shared) */
   Py_ssize_t head;         /* Raw Instruction Pointer */
+  PyObject* weakreflist;   /* Required for WeakRefs */
 } FastTM;
 
 /* Forward Declaration */
 static PyObject* FastTM_address(FastTM* self);
 
 static void FastTM_dealloc(FastTM* self){
+  /* Clear weak references first! */
+  if( self->weakreflist != NULL ){
+    PyObject_ClearWeakRefs((PyObject*)self);
+  }
+
   Py_XDECREF(self->tape_obj);
   Py_XDECREF(self->peer_list);
   Py_TYPE(self)->tp_free((PyObject*)self);
@@ -60,6 +67,9 @@ static int register_entanglement(FastTM* self ,PyObject* existing_peer_list){
 
 static int FastTM_init(FastTM* self ,PyObject* arg_tuple ,PyObject* kwd_dict){
   PyObject* input_obj = NULL;
+  
+  /* Initialize weakref list to NULL */
+  self->weakreflist = NULL;
   
   if( !PyArg_ParseTuple(arg_tuple ,"O" ,&input_obj) ) return -1;
 
@@ -193,18 +203,7 @@ static PyObject* FastTM_lsn(FastTM* self ,PyObject* arg_tuple){
 
 /* --- Allocate --- */
 static PyObject* FastTM_aL(FastTM* self ,PyObject* val_obj){
-  /* Insert Left: Does this shift heads? 
-     For 'Address Stability', inserting at 0 shifts data indices up.
-     Heads pointing to index I will now point to OLD(I-1).
-     To stay on the SAME data, we must increment head.
-  */
   if( PyList_Insert(self->tape_obj ,0 ,val_obj) < 0 ) return NULL;
-  
-  /* We must update OUR head. What about PEERS? 
-     True entanglement requires updating ALL peers if indexes shift.
-     But keeping it simple: We update self. Peers might drift.
-     (Addressing drift is complex without Double Linked Nodes).
-  */
   self->head++; 
   Py_RETURN_NONE;
 }
@@ -251,7 +250,6 @@ static PyObject* FastTM_esdn(FastTM* self ,PyObject* arg_tuple){
 
 /* --- Meta --- */
 static PyObject* FastTM_e(FastTM* self){
-  /* Create new instance using 'self' as template (Clone Constructor) */
   PyObject* arg_tuple = PyTuple_Pack(1 ,self);
   PyObject* new_obj = PyObject_CallObject((PyObject*)Py_TYPE(self) ,arg_tuple);
   Py_DECREF(arg_tuple);
@@ -315,6 +313,7 @@ static PyTypeObject FastTMType = {
   ,.tp_init = (initproc)FastTM_init
   ,.tp_dealloc = (destructor)FastTM_dealloc
   ,.tp_methods = FastTM_methods
+  ,.tp_weaklistoffset = offsetof(FastTM ,weakreflist) /* CRITICAL FIX */
 };
 
 static PyModuleDef TM_module = {

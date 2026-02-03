@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Epimetheus: The Only Primitive</title>
+    <title>Epimetheus</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
     
     <script src="style/body_visibility_hidden.js"></script>
@@ -15,7 +15,7 @@
       <RT-title 
         author="Thomas Walker Lynch" 
         date="2026-01-14" 
-        title="Epimetheus: The Only Primitive">
+        title="Epimetheus">
       </RT-title>
 
       <RT-TOC level="1"></RT-TOC>
@@ -36,7 +36,7 @@
       </p>
 
       <p>
-        Epimetheus (Afterthought) rejects this. It allows you to attach meaning (semantics) to objects after they are born. You can decide later that an object behaves like a number, or a string, or a user.
+        Epimetheus (Afterthought) is a different approach. It allows you to attach meaning (semantics) to objects after they are born. This is done in the form of properties that can be given arbitrary values, including test code.
       </p>
 
       <p>
@@ -52,7 +52,7 @@
       </p>
 
       <p>
-        Thus the <RT-term>Symbol</RT-term> (the unique, persistent identity) is the most primitive data entity. Given <RT-term>Symbol</RT-term>s, and a <RT-term>Turing Machine</RT-term> for building structure, everything else follows. But this is not an article about constructing mathematics or computer science, rather it is about a <RT-term>type system</RT-term>, so lets not get too carried away with the grand strokes of the pen.
+        Thus the <RT-term>Symbol</RT-term> (the unique, persistent identity) is the most primitive data entity. Given <RT-term>Symbol</RT-term>s, and a <RT-term>Turing Machine</RT-term> for building structure, everything else follows. Here are "<RT-term>Turing Machine</RT-term>" will be Python code.
       </p>
 
       <h1>Assumptions and Terms</h1>
@@ -81,11 +81,11 @@
       </p>
 
       <p>
-        In the Python version of Epimetheus <RT-term>symbol</RT-term>s are indeed implemented over integers.  However, Python integers are non-primitive and thus are passed by reference. The Python Epimetheus <RT-term>symbol instance</RT-term> factory will return a reference to an integer, not the base integer, as the <RT-term>symbol instance</RT-term>. Assignment will then copy the reference. Thus this reference is the <RT-term>symbol instance</RT-term> rather than the integer the <RT-term>symbol</RT-term> is based on.
+        In the Python version of Epimetheus <RT-term>symbol</RT-term>s are indeed implemented over integers.  However, Python integers are non-primitive and thus are passed by reference. The Python Epimetheus <RT-term>symbol instance</RT-term> factory will return a reference to an integer, not the base integer, as the <RT-term>symbol instance</RT-term>. Assignment will then copy the reference. So we end up with references to symbol instances, though these references are transparent, so we will call them symbol instances. Close enough, as they say.
       </p>
 
       <p>
-        In Epimetheus, we use a dictionary to give a <RT-term>symbol</RT-term> a name. The names need not meet the requirements imposed on a <RT-term>symbol instance</RT-term>, but it can be confusing when they don't. This is avoided in other <RT-term>symbol</RT-term> systems by implementing <RT-term>symbol</RT-term>s over character strings, and using the character string as both the name and the instance.
+        In Epimetheus, we use a dictionary to give a <RT-term>symbol</RT-term> a name. The names need not meet the requirements imposed on a <RT-term>symbols</RT-term>, but it can be confusing when they don't. Other implementations avoid this issue by using strings as the basis for symbols, though this approach causes some other problems, such as creating the requirement that all symbols must have names, and requiring the user make names that follow the requirements of a symbol instances. It is not uncommon to find in such implementations users meeting these requirements by  writing programs to create names for symbols.
        </p>
 
       <h3>Required Properties</h3>
@@ -153,7 +153,7 @@
 
       <p>
         A <RT-term>symbol</RT-term> is associated with an object using a Python dictionary. The <RT-term>symbol</RT-term> is the key, and the object is that thing which is "looked up" via said key.
-        One such example is the <RT-term>symbol</RT-term> name dictionary mentioned in the prior section.
+        An example of such a dictionary is the <RT-term>symbol</RT-term> name dictionary mentioned in the prior section.
       </p>
 
       <h2>Tape</h2>
@@ -198,7 +198,7 @@
       </p>
 
       <p>
-        The reader might have expected the <RT-term>path</RT-term> to go from left to right, with the <RT-term>destination</RT-term> being in the rightmost cell. This would be natural because we read characters from a written page going from left to right. However, such a definition would run into a problem for us, as we will need for paths to always have a destination, and <RT-term>tape</RT-term>s can be open on the right, so they do not always have a rightmost cell.
+        The reader might have expected the <RT-term>path</RT-term> to go from left to right, with the <RT-term>destination</RT-term> instead being in the rightmost cell. This would be natural because we read characters from a written page going from left to right. However, such a definition would run into a problem for us, as we will need for paths to always have a destination, and <RT-term>tape</RT-term>s can be open on the right, so they do not always have a rightmost cell.
       </p>
 
       <blockquote>
@@ -216,7 +216,7 @@
       </p>
 
       <p>
-        Thus a function is more restricted than a <RT-term>tape</RT-term> of paths, and due to this restriction it is possible to adopt the following notation, where a <RT-term>destination</RT-term> is said to be determined by, i.e. be a function of, the <RT-term>way</RT-term>:
+        Thus a function is more restricted than a <RT-term>tape</RT-term> of paths, as it disallows any paths made unique solely by changing the destination. This property facilities the following notation, where a <RT-term>destination</RT-term> is said to be determined by, i.e. be a function of, the <RT-term>way</RT-term>:
       </p>
 
       <RT-math>
@@ -224,7 +224,7 @@
       </RT-math>
 
       <p>
-        That the same <RT-term>way</RT-term> always leads to the same destination fits our common experience. If a person followed the same way twice and landed in different destinations. that person might think himself/herself to be in a Sci-Fi movie. It is also intuitive to us that the function restrictions do not exclude the possibility that multiple <RT-term>way</RT-term>s can lead to the same destination. Because we often compute things that are related to our daily experience it is not surprising that this is a very common pattern. And this is not a coincidence, this is the reason functions are defined as they are.
+        That the same <RT-term>way</RT-term> always leads to the same destination fits our common experience. If a person followed the same way twice and landed in different destinations, that person might think himself/herself to be in a Sci-Fi movie. It is also intuitive to us that the function restrictions do not exclude the possibility that multiple <RT-term>way</RT-term>s can lead to the same destination. Because we often compute things that are related to our intuition about the world, <RT-term>function</RT-term>s are very common.  As for discreteness and intuition, that conversation goes back at least to Democritus and Aristotle.
       </p>
 
       <script src="style/style_orchestrator.js"></script>
