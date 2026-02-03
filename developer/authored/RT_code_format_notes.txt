@@ -1,0 +1,8 @@
+
+**RT Code Format Enforcement:**
+1. **Format:** Pre-space commas `(a ,b)`. 2-space indent.
+2. **Enclosures:** Space padding ONLY for nested/multi-level enclosures (e.g., `if( (a) )` or `if( func() )`, but `if( a )`).
+3. **Naming:** `PascalCase` for Types/Modules. `snake_case` for Functions/Vars.
+4. **Acronyms:** MUST be capitalized in `snake_case` (e.g., `TM_module`, `JSON_parser`, `CLI_func`).
+5. **Plurals:** Forbidden in identifiers. Use container suffixes (e.g., `item_list`, `arg_tuple`, `peer_set`).
+
