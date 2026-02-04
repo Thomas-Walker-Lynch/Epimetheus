@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>TM First Order</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+    
+    <script src="style/body_visibility_hidden.js"></script>
+    <script>
+      window.StyleRT.body_visibility_hidden();
+    </script>
+  </head>
+  <body>
+    <RT-article>
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-02-04" 
+        title="TM First Order">
+      </RT-title>
+
+      <RT-TOC level="1"></RT-TOC>
+
+      <h1>Introduction</h1>
+
+      <p>
+        The <RT-term>First Order Tape Machine</RT-term> (TM) is a high-performance mechanism for navigating and manipulating data sequences.
+      </p>
+
+      <p>
+        If you are coming from standard programming, you are likely used to arrays (which just sit there) or iterators (which disappear after one use). A <strong>Tape Machine</strong> is different: it is a persistent agent that lives on your data. It has a "head" (a position) that stays where you put it until you tell it to move.
+      </p>
+
+      <p>
+        Think of it like a cursor in a text editor, but for data. You can read what's under the cursor, overwrite it, move left or right, or even spawn a second cursor ("entangle") to work on the same text at the same time.
+      </p>
+
+      <h1>The First-Rest Pattern</h1>
+
+      <p>
+        To use a Tape Machine effectively, you must understand the <strong>First-Rest</strong> pattern. This is the fundamental way TMs view data recursion and iteration.
+      </p>
+
+      <p>
+        At any moment, a Tape Machine divides the world into two parts:
+      </p>
+      <ol>
+        <li><strong>First:</strong> The single cell currently under the head. This is the "Now."</li>
+        <li><strong>Rest:</strong> Everything else to the right of the head. This is the "Future."</li>
+      </ol>
+
+      <p>
+        The standard processing loop acts on the <em>First</em> item, and then checks if a <em>Rest</em> exists. Crucially, the programmer uses the query <RT-code>qR()</RT-code> (Query Rightmost) to <strong>protect</strong> the step command <RT-code>s()</RT-code>. If <RT-code>qR()</RT-code> is false, it is safe to step into the Rest.
+      </p>
+
+      <RT-code>
+# Example: Summing a list using First-Rest
+total = tm.r()      # Process the "First"
+while not tm.qR():  # Guard: Is there a "Rest"?
+    tm.s()          # Safe to step
+    total += tm.r() # Process the new "First"
+      </RT-code>
+
+      <h1>Contract with the Programmer</h1>
+
+      <p>
+        The Tape Machine is a precision tool. To achieve its speed and safety, it adheres to a strict contract.
+      </p>
+
+      <h2>The Machine Guarantees:</h2>
+      <ul>
+        <li><strong>Persistence:</strong> The head will never move unless you explicitly command it.</li>
+        <li><strong>Bounds Safety:</strong> The machine will refuse to step off the edge of the tape (unless configured with a specific topology like <code>Circle</code>).</li>
+        <li><strong>Non-Destructive Nature:</strong> This First Order machine will <strong>never</strong> structurally alter the tape. It cannot insert or delete cells. This ensures that addresses (indices) remain stable forever.</li>
+        <li><strong>Entanglement Safety:</strong> If you spawn multiple heads (using <code>e</code>), they share the same underlying memory. Writing with one head is immediately visible to all others.</li>
+      </ul>
+
+      <h2>You Guarantee:</h2>
+      <ul>
+        <li><strong>Thread Discipline:</strong> While the machine supports entanglement across threads (via <code>t</code>), you must ensure that your application logic does not create race conditions on the data itself.</li>
+        <li><strong>Initialization:</strong> You must provide a valid data container (like a List) or another TM to initialize the machine.</li>
+      </ul>
+
+      <h1>Command Reference</h1>
+
+      <p>
+        The Tape Machine is controlled via a formal command language. This section defines the abstract commands available to the machine. The notation uses strictly ASCII characters.
+      </p>
+
+      <h2>Grammar</h2>
+      <RT-code>
+statement  :: [location]command+[quantifier]*[arg]*
+location   :: l | L | R | ε
+command    :: r | w | s | q | e 
+quantifier :: A | R | n
+      </RT-code>
+
+      <h2>Definitions</h2>
+
+      <h3>Location</h3>
+      <ul>
+        <li><RT-code>ε</RT-code> (Empty): Implicit Right / Forward / Plus.</li>
+        <li><RT-code>l</RT-code>: <strong>l</strong>eft neighbor.</li>
+        <li><RT-code>L</RT-code>: <strong>L</strong>eftmost.</li>
+        <li><RT-code>R</RT-code>: <strong>R</strong>ightmost.</li>
+      </ul>
+
+      <h3>Command</h3>
+      <ul>
+        <li><RT-code>r</RT-code>: <strong>r</strong>ead the cell under the head.</li>
+        <li><RT-code>w</RT-code>: <strong>w</strong>rite the cell under the head.</li>
+        <li><RT-code>s</RT-code>: <strong>s</strong>tep the head position.</li>
+        <li><RT-code>q</RT-code>: <strong>q</strong>uery. Ask a question about the machine state.</li>
+        <li><RT-code>e</RT-code>: <strong>e</strong>ntangle. Spawns a new head on the same tape.</li>
+      </ul>
+
+      <h3>Quantifier</h3>
+      <ul>
+        <li><RT-code>A</RT-code>: <strong>A</strong>ddress (Head Index).</li>
+        <li><RT-code>R</RT-code>: <strong>R</strong>ightmost Address (Extent).</li>
+        <li><RT-code>n</RT-code>: Repeat <strong>n</strong> times (requires argument).</li>
+      </ul>
+      
+      <h2>Examples</h2>
+      
+      <RT-code>
+ls    ; Step to left neighbor
+Ls    ; Cue Leftmost (Go to index 0)
+Rs    ; Cue Rightmost (Go to last index)
+qA    ; Query Address (What is the head index?)
+      </RT-code>
+
+      <h1>Primitive Method Reference</h1>
+
+      <p>
+        This section details the actual methods exposed by the First Order TM implementation (Python/C). These primitives map directly to the command language.
+      </p>
+
+      <h2>Navigation Primitives</h2>
+      <ul>
+        <li><RT-code>s()</RT-code>: Step Right.</li>
+        <li><RT-code>sn(n)</RT-code>: Step Right <RT-math>n</RT-math> times.</li>
+        <li><RT-code>ls()</RT-code>: Step Left.</li>
+        <li><RT-code>lsn(n)</RT-code>: Step Left <RT-math>n</RT-math> times.</li>
+        <li><RT-code>Ls()</RT-code>: Cue Leftmost (Head = 0).</li>
+        <li><RT-code>Rs()</RT-code>: Cue Rightmost (Head = Extent).</li>
+        <li><RT-code>Lsn(n)</RT-code>: Cue Leftmost with Offset <RT-math>n</RT-math> (Head = 0 + n).</li>
+        <li><RT-code>Rsn(n)</RT-code>: Cue Rightmost with Offset <RT-math>n</RT-math> (Head = Extent - n).</li>
+      </ul>
+
+      <h2>I/O Primitives</h2>
+      <ul>
+        <li><RT-code>r()</RT-code>: Read current cell.</li>
+        <li><RT-code>rn(n)</RT-code>: Read <RT-math>n</RT-math> cells (Bulk Read).</li>
+        <li><RT-code>w(v)</RT-code>: Write value to current cell.</li>
+        <li><RT-code>wn(list)</RT-code>: Write list of values (Bulk Write).</li>
+      </ul>
+
+      <h2>Query Primitives</h2>
+      <p>
+        Introspection commands used to check machine state without side effects.
+      </p>
+      <ul>
+        <li><RT-code>qA()</RT-code>: <strong>Query Address</strong>. Return the current head index.</li>
+      </ul>
+
+      <h2>Entanglement Primitives</h2>
+      <ul>
+        <li><RT-code>e()</RT-code>: <strong>Entangle</strong>. Creates a new machine instance sharing the same tape and safety catalog. The new machine's head is initialized to the same position as the original machine.</li>
+        <li><RT-code>es()</RT-code>: Entangle, Step Right.</li>
+        <li><RT-code>esn(n)</RT-code>: Entangle, Step Right <RT-math>n</RT-math> times.</li>
+        <li><RT-code>els()</RT-code>: Entangle, Step Left.</li>
+        <li><RT-code>elsn(n)</RT-code>: Entangle, Step Left <RT-math>n</RT-math> times.</li>
+        <li><RT-code>eLs()</RT-code>: Entangle, Cue Leftmost.</li>
+        <li><RT-code>eRs()</RT-code>: Entangle, Cue Rightmost.</li>
+        <li><RT-code>eLsn(n)</RT-code>: Entangle, Cue Leftmost with Offset.</li>
+        <li><RT-code>eRsn(n)</RT-code>: Entangle, Cue Rightmost with Offset.</li>
+      </ul>
+
+      <h1>Architecture</h1>
+
+      <h2>Behavior Selection (Flags)</h2>
+      <p>
+        The First Order TM is designed to be flexible. When creating a machine, you can pass a set of <strong>Flags</strong> to the constructor to select specific behaviors or safety checks. This allows the core machine to remain fast (zero overhead) while providing options for debugging or specialized topologies.
+      </p>
+
+      <RT-code>
+# Example: Creating a machine with Safety Checks and Debug Messages
+tm = TM(data_list, flags={Debug.safe, Debug.message})
+      </RT-code>
+
+      <ul>
+        <li><RT-code>Debug.safe</RT-code>: Enables extra runtime bounds checking and validation.</li>
+        <li><RT-code>Debug.message</RT-code>: Prints a trace of operations to the console (useful for learning).</li>
+        <li><RT-code>Topology.circle</RT-code>: Configures the machine to wrap around at the ends of the tape.</li>
+      </ul>
+
+      <h2>Entanglement</h2>
+      <p>
+        A critical feature of the TM is <RT-term>Entanglement</RT-term>. Multiple TMs can operate on the same underlying tape memory simultaneously.
+      </p>
+
+      <p>
+        To ensure safety, the TM implements an <RT-neologism>Entanglement Catalog</RT-neologism> in the C layer. While structural modification (allocation/deletion) is disallowed in the First Order machine, the Catalog remains the system of record for tracking all active heads on a shared tape, providing the foundation for future synchronization primitives.
+      </p>
+
+      <script src="style/style_orchestrator.js"></script>
+      <script>
+        window.StyleRT.style_orchestrator();
+      </script>
+    </RT-article>
+  </body>
+</html>

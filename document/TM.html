@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Tape Machine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+    
+    <script src="style/body_visibility_hidden.js"></script>
+    <script>
+      window.StyleRT.body_visibility_hidden();
+    </script>
+  </head>
+  <body>
+    <RT-article>
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-02-04" 
+        title="Tape Machine">
+      </RT-title>
+
+      <RT-TOC level="1"></RT-TOC>
+
+      <h1>Introduction</h1>
+
+      <p>
+        A <RT-term>Tape Machine</RT-term> (TM) is an abstract mechanism for the manipulation of data found in sequences. Such sequences include lists, arrays, sets according to an ordering function, and maps also against an ordering function. Also included are linear traversals of more complex data structures. TM is discussed in detail in the <RT-term>TTCA</RT-term> book.
+      </p>
+
+      <p>
+        Unlike standard arrays (which are stateless) or iterators (which are transient), a TM combines a data container with a persistent <RT-term>head</RT-term>. The head maintains a positional state on the tape, allowing for navigation, reading, and writing of cells.
+      </p>
+
+      <p>
+        Thus each TM type has the nice property of encompassing both data and pointers within one structure.
+      </p>
+
+      <p>
+        A first order TM is characterized by having only interface functions that manipulate the
+        data found on the tape.   There are multiple types of first order TMs based on how we view the tape topology, on whether multiple machines can share a tape, and whether tape structure can be changed. Tape topology includes things such as singleton, finite bound sequences, circular sequences, tapes that are open on one or both ends, and tapes which can only be traversed in one direction.
+      </p>
+
+      <p>
+        An abstract tape machine has a TM interface, but the behavior is determined through functions rather than through data found in a container being used as a tape. A simple abstract tape machine could be, for example, a counting number machine that makes use of a big integer as the data instead of an array of numbers.
+       </p>
+
+      <p>
+        When multiple machines share the same tape, we say the machines are <RT-term>entangled</RT-term>. For analysis to remain first order, when machines are entangled, we must be careful with destructive operations. There are multiple approaches to this, each corresponding to a different type of first order TM. One approach is the <RT-code>TM_ND</RT-code> which has no tape structure modifying operations.  Another approach is the <RT-code>TM_SOLO</RT-code> which does not allow more than one machine on its tape.  Yet another approach is the <RT-code>TM_EA</RT-code>, where <RT-term>EA</RT-term> means 'entanglement accounting'.  With entanglement accounting all the machines that share a tape also share the catalog of entangled machines.  Each destructive operation then checks the listed machines and their head positions to assure that no machine is structurally broken by the operation.
+        For example, before deleting a cell, a machine checks that no machine has a head on the specified cell, and thus would become orphaned by the operation.
+      </p>
+
+      <h1>Command reference (ND-TM)</h1>
+
+      <p>
+        The following commands are available for the Non-Destructive First Order Machine. The notation uses strictly ASCII characters.
+      </p>
+
+      <h2>Grammar</h2>
+      <RT-code>
+statement  :: [location]command+[quantifier]*[&contract]*[arg]*
+location   :: l | L | R | ε
+command    :: r | w | s | q | e 
+quantifier :: A | R | n
+contract   :: hL | hR
+      </RT-code>
+
+      <h2>Definitions</h2>
+
+      <h3>Location</h3>
+      <ul>
+        <li><RT-code>ε</RT-code> (Empty): Implicit Right / Forward / Plus.</li>
+        <li><RT-code>l</RT-code>: <strong>l</strong>eft neighbor.</li>
+        <li><RT-code>L</RT-code>: <strong>L</strong>eftmost.</li>
+        <li><RT-code>R</RT-code>: <strong>R</strong>ightmost.</li>
+      </ul>
+
+      <h3>Command</h3>
+      <ul>
+        <li><RT-code>r</RT-code>: <strong>r</strong>ead the cell under the head.</li>
+        <li><RT-code>w</RT-code>: <strong>w</strong>rite the cell under the head.</li>
+        <li><RT-code>s</RT-code>: <strong>s</strong>tep the head position.</li>
+        <li><RT-code>q</RT-code>: <strong>q</strong>uery. Ask a question about the machine state.</li>
+        <li><RT-code>e</RT-code>: <strong>e</strong>ntangle. Spawns a new head on the same tape.</li>
+      </ul>
+
+      <h3>Quantifier</h3>
+      <ul>
+        <li><RT-code>A</RT-code>: <strong>A</strong>ddress (Head Index).</li>
+        <li><RT-code>R</RT-code>: <strong>R</strong>ightmost Address (Extent).</li>
+        <li><RT-code>n</RT-code>: Repeat <strong>n</strong> times (requires argument).</li>
+      </ul>
+
+      <h3>Contracts</h3>
+      <p>
+        Contracts assert the state of the machine before execution.
+      </p>
+      <ul>
+        <li><RT-code>hL</RT-code>: Head is at <strong>L</strong>eftmost.</li>
+        <li><RT-code>hR</RT-code>: Head is at <strong>R</strong>ightmost.</li>
+      </ul>
+      
+      <h2>Examples</h2>
+      
+      <RT-code>
+ls    ; Step to left neighbor
+Ls    ; Cue Leftmost (Go to index 0)
+Rs    ; Cue Rightmost (Go to last index)
+qA    ; Query Address (What is the head index?)
+      </RT-code>
+
+      <h1>Primitive method reference</h1>
+
+      <p>
+        This section details the actual methods exposed by the First Order TM implementation (Python/C). These primitives map directly to the command language.
+      </p>
+
+      <h2>Navigation primitives</h2>
+      <ul>
+        <li><RT-code>s()</RT-code>: Step right.</li>
+        <li><RT-code>sn(n)</RT-code>: Step right <RT-math>n</RT-math> times.</li>
+        <li><RT-code>ls()</RT-code>: Step left.</li>
+        <li><RT-code>lsn(n)</RT-code>: Step left <RT-math>n</RT-math> times.</li>
+        <li><RT-code>Ls()</RT-code>: Cue leftmost (Head = 0).</li>
+        <li><RT-code>Rs()</RT-code>: Cue rightmost (Head = Extent).</li>
+        <li><RT-code>Lsn(n)</RT-code>: Cue leftmost with offset <RT-math>n</RT-math> (Head = 0 + n).</li>
+        <li><RT-code>Rsn(n)</RT-code>: Cue rightmost with offset <RT-math>n</RT-math> (Head = Extent - n).</li>
+      </ul>
+
+      <h2>I/O primitives</h2>
+      <ul>
+        <li><RT-code>r()</RT-code>: Read current cell.</li>
+        <li><RT-code>rn(n)</RT-code>: Read <RT-math>n</RT-math> cells (Bulk read).</li>
+        <li><RT-code>w(v)</RT-code>: Write value to current cell.</li>
+        <li><RT-code>wn(list)</RT-code>: Write list of values (Bulk write).</li>
+      </ul>
+
+      <h2>Query primitives</h2>
+      <p>
+        Introspection commands used to check machine state without side effects.
+      </p>
+      <ul>
+        <li><RT-code>qA()</RT-code>: <strong>Query address</strong>. Return the current head index.</li>
+      </ul>
+
+      <h2>Entanglement primitives</h2>
+      <ul>
+        <li><RT-code>e()</RT-code>: <strong>Entangle</strong>. Creates a new machine instance sharing the same tape and safety catalog. The new machine's head is initialized to the same position as the original machine.</li>
+        <li><RT-code>es()</RT-code>: Entangle, step right.</li>
+        <li><RT-code>esn(n)</RT-code>: Entangle, step right <RT-math>n</RT-math> times.</li>
+        <li><RT-code>els()</RT-code>: Entangle, step left.</li>
+        <li><RT-code>elsn(n)</RT-code>: Entangle, step left <RT-math>n</RT-math> times.</li>
+        <li><RT-code>eLs()</RT-code>: Entangle, cue leftmost.</li>
+        <li><RT-code>eRs()</RT-code>: Entangle, cue rightmost.</li>
+        <li><RT-code>eLsn(n)</RT-code>: Entangle, cue leftmost with offset.</li>
+        <li><RT-code>eRsn(n)</RT-code>: Entangle, cue rightmost with offset.</li>
+      </ul>
+
+      <h1>Usage</h1>
+
+      <h2>First order TM properties</h2>
+
+      <p>
+      For a first order TM these properties are always true.
+      </p>
+
+      <ol>
+        <li>The head is always on a valid cell.</li>
+        <li>All cells return a value when read.</li>
+      </ol>
+
+      <p>
+      In order to maintain these properties, a TM will make use of inclusive bounds for intervals. Thus an interval is marked by placing a heads on the leftmost cell of
+      the interval, and on an entangled machine on the rightmost cell of the interval.
+      </p>
+
+      <h2>Contract with the programmer</h2>
+
+      <p>
+        Some first order TM types rely upon the programmer to maintain a contract in order to maintain the first order TM properties. Such machines typically have debug variants that add contract checks. For some machines breaking the contract can limit the ability of the compiler to optimize code, for other machines breaking the contract can lead
+        to program bugs.
+      </p>
+
+      <p>
+        <strong>The Contract:</strong>
+      </p>
+      <ol>
+        <li>When there is a right bound, the caller guarantees they will never command the machine to step beyond the rightmost cell.</li>
+        <li>When there is a left bound, the caller guarantees they will never command the machine to step left of the leftmost cell.</li>
+      </ol>
+
+      <p>
+      When traversing a tape, this contract can be fulfilled by using a first rest pattern.
+      </p>
+
+      <h1>The First-Rest pattern with initialization</h1>
+
+      <RT-code>
+# Pattern 1: First-Rest (Initialize with First)
+# Useful when the accumulator must start with the first value.
+total = tm.r()      # Process First
+while not tm.qR():  # Guard: Is there a Rest?
+    tm.s()          # Step (Protected)
+    total += tm.r() # Process Next
+      </RT-code>
+
+      <p>
+       Here <RT-code>tm.qR()</RT-code> is a command that queries the machine to find out if
+       the head is on the rightmost cell. It guards the step within the loop. Note no redundant tests are done, and the loop ends are clean without stepping off the end of a tape. (And thus not stepping off the end of a memory page or often, of a cache line.)
+      </p>
+
+      <h1>The First-Rest pattern without initialization</h1>
+
+      <p>
+        Sometimes we initialize the accumulator to an identity value (like 0) before the loop starts. In this case, the most natural structure is the "Loop-and-a-Half" (middle-exit loop).
+      </p>
+
+      <RT-code>
+# Conceptual "do" loop
+do:
+    total += tm.r()   # Always process the current cell
+    if tm.qR() break  # Middle Break: If at rightmost, stop.
+    tm.s()            # Step only if not at the end.
+      </RT-code>
+
+      <p>
+        Infamously, Python does not have a `do` statement, but it can be emulated:
+      </p>
+
+      <RT-code>
+# Python Implementation
+while True:
+    total += tm.r()
+    if tm.qR(): break
+    tm.s()
+      </RT-code>
+
+      <p>
+        The middle test of <RT-code>tm.qR()</RT-code> guards the <RT-code>tm.s()</RT-code> so that the machine will never step beyond rightmost.
+      </p>
+
+      <script src="style/style_orchestrator.js"></script>
+      <script>
+        window.StyleRT.style_orchestrator();
+      </script>
+    </RT-article>
+  </body>
+</html>
