@@ -23,7 +23,7 @@
       <h1>Introduction</h1>
 
       <p>
-        A <RT-term>Tape Machine</RT-term> (TM) is an abstract mechanism for the manipulation of data found in sequences. Such sequences include lists, arrays, sets according to an ordering function, and maps also against an ordering function. Also included are linear traversals of more complex data structures. TM is discussed in detail in the <RT-term>TTCA</RT-term> book.
+        A <RT-term>Tape Machine</RT-term> (TM) is used to manipulation data found in a sequences. Such sequences include lists, arrays, sets according to an ordering function, and maps also against an ordering function. Also included are linear traversals of more complex data structures. TM is discussed in detail in the <RT-term>TTCA</RT-term> book.
       </p>
 
       <p>
@@ -31,7 +31,7 @@
       </p>
 
       <p>
-        Thus each TM type has the nice property of encompassing both data and pointers within one structure.
+        Thus each TM type has the nice property of encompassing both data and pointers into that data within one structure.
       </p>
 
       <p>
@@ -45,60 +45,50 @@
 
       <p>
         When multiple machines share the same tape, we say the machines are <RT-term>entangled</RT-term>. For analysis to remain first order, when machines are entangled, we must be careful with destructive operations. There are multiple approaches to this, each corresponding to a different type of first order TM. One approach is the <RT-code>TM_ND</RT-code> which has no tape structure modifying operations.  Another approach is the <RT-code>TM_SOLO</RT-code> which does not allow more than one machine on its tape.  Yet another approach is the <RT-code>TM_EA</RT-code>, where <RT-term>EA</RT-term> means 'entanglement accounting'.  With entanglement accounting all the machines that share a tape also share the catalog of entangled machines.  Each destructive operation then checks the listed machines and their head positions to assure that no machine is structurally broken by the operation.
-        For example, before deleting a cell, a machine checks that no machine has a head on the specified cell, and thus would become orphaned by the operation.
+        For example, before deleting a cell, a machine checks that no machine has a head on the specified cell, and thus would become orphaned when the cell is removed from the tape.
       </p>
 
-      <h1>Command reference (ND-TM)</h1>
+      <h1>Command reference for the ND-TM</h1>
 
       <p>
-        The following commands are available for the Non-Destructive First Order Machine. The notation uses strictly ASCII characters.
+        The following commands are available for the Nondestructive First Order Machine. In this version the notation uses strictly ASCII characters.
       </p>
 
-      <h2>Grammar</h2>
+      <h2>The grammar</h2>
       <RT-code>
-statement  :: [location]command+[quantifier]*[&contract]*[arg]*
-location   :: l | L | R | ε
+statement  :: [location]command+[quantifier]*[arg]*
+location   :: l | L | R  default is right cell
 command    :: r | w | s | q | e 
-quantifier :: A | R | n
-contract   :: hL | hR
+quantifier :: A | R | n  default n is one, default A is the head position
       </RT-code>
 
-      <h2>Definitions</h2>
+      <h2>The definitions</h2>
 
-      <h3>Location</h3>
+      <h3>The location</h3>
       <ul>
-        <li><RT-code>ε</RT-code> (Empty): Implicit Right / Forward / Plus.</li>
-        <li><RT-code>l</RT-code>: <strong>l</strong>eft neighbor.</li>
-        <li><RT-code>L</RT-code>: <strong>L</strong>eftmost.</li>
-        <li><RT-code>R</RT-code>: <strong>R</strong>ightmost.</li>
+        <li><RT-code>ε</RT-code> (Empty) implies a step to the right, forward, or plus.</li>
+        <li><RT-code>l</RT-code> moves to the <strong>l</strong>eft neighbor.</li>
+        <li><RT-code>L</RT-code> moves to the <strong>L</strong>eftmost position.</li>
+        <li><RT-code>R</RT-code> moves to the <strong>R</strong>ightmost position.</li>
       </ul>
 
-      <h3>Command</h3>
+      <h3>The commands</h3>
       <ul>
-        <li><RT-code>r</RT-code>: <strong>r</strong>ead the cell under the head.</li>
-        <li><RT-code>w</RT-code>: <strong>w</strong>rite the cell under the head.</li>
-        <li><RT-code>s</RT-code>: <strong>s</strong>tep the head position.</li>
-        <li><RT-code>q</RT-code>: <strong>q</strong>uery. Ask a question about the machine state.</li>
-        <li><RT-code>e</RT-code>: <strong>e</strong>ntangle. Spawns a new head on the same tape.</li>
+        <li><RT-code>r</RT-code> <strong>r</strong>eads the cell under the head.</li>
+        <li><RT-code>w</RT-code> <strong>w</strong>rites to the cell under the head.</li>
+        <li><RT-code>s</RT-code> <strong>s</strong>teps the head position.</li>
+        <li><RT-code>q</RT-code> <strong>q</strong>ueries the machine state.</li>
+        <li><RT-code>e</RT-code> <strong>e</strong>ntangles and spawns a new head on the same tape.</li>
       </ul>
 
-      <h3>Quantifier</h3>
+      <h3>The quantifiers</h3>
       <ul>
-        <li><RT-code>A</RT-code>: <strong>A</strong>ddress (Head Index).</li>
-        <li><RT-code>R</RT-code>: <strong>R</strong>ightmost Address (Extent).</li>
-        <li><RT-code>n</RT-code>: Repeat <strong>n</strong> times (requires argument).</li>
+        <li><RT-code>A</RT-code> returns the <strong>A</strong>ddress or head index.</li>
+        <li><RT-code>R</RT-code> returns the <strong>R</strong>ightmost address or extent.</li>
+        <li><RT-code>n</RT-code> repeats <strong>n</strong> times.</li>
       </ul>
 
-      <h3>Contracts</h3>
-      <p>
-        Contracts assert the state of the machine before execution.
-      </p>
-      <ul>
-        <li><RT-code>hL</RT-code>: Head is at <strong>L</strong>eftmost.</li>
-        <li><RT-code>hR</RT-code>: Head is at <strong>R</strong>ightmost.</li>
-      </ul>
-      
-      <h2>Examples</h2>
+      <h2>The examples</h2>
       
       <RT-code>
 ls    ; Step to left neighbor
@@ -107,56 +97,56 @@ Rs    ; Cue Rightmost (Go to last index)
 qA    ; Query Address (What is the head index?)
       </RT-code>
 
-      <h1>Primitive method reference</h1>
+      <h1>The primitive method reference</h1>
 
       <p>
         This section details the actual methods exposed by the First Order TM implementation (Python/C). These primitives map directly to the command language.
       </p>
 
-      <h2>Navigation primitives</h2>
+      <h2>The navigation primitives</h2>
       <ul>
-        <li><RT-code>s()</RT-code>: Step right.</li>
-        <li><RT-code>sn(n)</RT-code>: Step right <RT-math>n</RT-math> times.</li>
-        <li><RT-code>ls()</RT-code>: Step left.</li>
-        <li><RT-code>lsn(n)</RT-code>: Step left <RT-math>n</RT-math> times.</li>
-        <li><RT-code>Ls()</RT-code>: Cue leftmost (Head = 0).</li>
-        <li><RT-code>Rs()</RT-code>: Cue rightmost (Head = Extent).</li>
-        <li><RT-code>Lsn(n)</RT-code>: Cue leftmost with offset <RT-math>n</RT-math> (Head = 0 + n).</li>
-        <li><RT-code>Rsn(n)</RT-code>: Cue rightmost with offset <RT-math>n</RT-math> (Head = Extent - n).</li>
+        <li><RT-code>s()</RT-code> steps right.</li>
+        <li><RT-code>sn(n)</RT-code> steps right <RT-math>n</RT-math> times.</li>
+        <li><RT-code>ls()</RT-code> steps left.</li>
+        <li><RT-code>lsn(n)</RT-code> steps left <RT-math>n</RT-math> times.</li>
+        <li><RT-code>Ls()</RT-code> cues leftmost.</li>
+        <li><RT-code>Rs()</RT-code> cues rightmost.</li>
+        <li><RT-code>Lsn(n)</RT-code> cues leftmost with offset <RT-math>n</RT-math>.</li>
+        <li><RT-code>Rsn(n)</RT-code> cues rightmost with offset <RT-math>n</RT-math>.</li>
       </ul>
 
-      <h2>I/O primitives</h2>
+      <h2>The input and output primitives</h2>
       <ul>
-        <li><RT-code>r()</RT-code>: Read current cell.</li>
-        <li><RT-code>rn(n)</RT-code>: Read <RT-math>n</RT-math> cells (Bulk read).</li>
-        <li><RT-code>w(v)</RT-code>: Write value to current cell.</li>
-        <li><RT-code>wn(list)</RT-code>: Write list of values (Bulk write).</li>
+        <li><RT-code>r()</RT-code> reads the current cell.</li>
+        <li><RT-code>rn(n)</RT-code> reads <RT-math>n</RT-math> cells.</li>
+        <li><RT-code>w(v)</RT-code> writes a value to the current cell.</li>
+        <li><RT-code>wn(list)</RT-code> writes a list of values.</li>
       </ul>
 
-      <h2>Query primitives</h2>
+      <h2>The query primitives</h2>
       <p>
         Introspection commands used to check machine state without side effects.
       </p>
       <ul>
-        <li><RT-code>qA()</RT-code>: <strong>Query address</strong>. Return the current head index.</li>
+        <li><RT-code>qA()</RT-code> queries the address to return the current head index.</li>
       </ul>
 
-      <h2>Entanglement primitives</h2>
+      <h2>The entanglement primitives</h2>
       <ul>
-        <li><RT-code>e()</RT-code>: <strong>Entangle</strong>. Creates a new machine instance sharing the same tape and safety catalog. The new machine's head is initialized to the same position as the original machine.</li>
-        <li><RT-code>es()</RT-code>: Entangle, step right.</li>
-        <li><RT-code>esn(n)</RT-code>: Entangle, step right <RT-math>n</RT-math> times.</li>
-        <li><RT-code>els()</RT-code>: Entangle, step left.</li>
-        <li><RT-code>elsn(n)</RT-code>: Entangle, step left <RT-math>n</RT-math> times.</li>
-        <li><RT-code>eLs()</RT-code>: Entangle, cue leftmost.</li>
-        <li><RT-code>eRs()</RT-code>: Entangle, cue rightmost.</li>
-        <li><RT-code>eLsn(n)</RT-code>: Entangle, cue leftmost with offset.</li>
-        <li><RT-code>eRsn(n)</RT-code>: Entangle, cue rightmost with offset.</li>
+        <li><RT-code>e()</RT-code> entangles a new machine instance sharing the same tape and safety catalog.</li>
+        <li><RT-code>es()</RT-code> entangles and steps right.</li>
+        <li><RT-code>esn(n)</RT-code> entangles and steps right <RT-math>n</RT-math> times.</li>
+        <li><RT-code>els()</RT-code> entangles and steps left.</li>
+        <li><RT-code>elsn(n)</RT-code> entangles and steps left <RT-math>n</RT-math> times.</li>
+        <li><RT-code>eLs()</RT-code> entangles and cues leftmost.</li>
+        <li><RT-code>eRs()</RT-code> entangles and cues rightmost.</li>
+        <li><RT-code>eLsn(n)</RT-code> entangles and cues leftmost with an offset.</li>
+        <li><RT-code>eRsn(n)</RT-code> entangles and cues rightmost with an offset.</li>
       </ul>
 
-      <h1>Usage</h1>
+      <h1>The usage</h1>
 
-      <h2>First order TM properties</h2>
+      <h2>The first order TM properties</h2>
 
       <p>
       For a first order TM these properties are always true.
@@ -172,7 +162,7 @@ qA    ; Query Address (What is the head index?)
       the interval, and on an entangled machine on the rightmost cell of the interval.
       </p>
 
-      <h2>Contract with the programmer</h2>
+      <h2>The contract with the programmer</h2>
 
       <p>
         Some first order TM types rely upon the programmer to maintain a contract in order to maintain the first order TM properties. Such machines typically have debug variants that add contract checks. For some machines breaking the contract can limit the ability of the compiler to optimize code, for other machines breaking the contract can lead
