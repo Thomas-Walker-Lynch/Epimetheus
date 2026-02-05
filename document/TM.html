@@ -86,14 +86,15 @@
         The following commands are available for the Nondestructive First Order Machine. In this version the notation uses strictly ASCII characters.
       </p>
 
-      <h2>Grammar</h2>
-      <RT-code>
-        statement  :: [machine] (command arg_type* )+
-        command    :: e | q | r | s | w 
-        arg_type   :: A | n | R
-        machine    :: L
 
-      </RT-code>
+
+      <h2>Grammar</h2>
+<RT-code>
+statement  :: ( [machine] command arg* )+
+machine    :: L
+command    :: e | q | r | s | w
+arg        :: R | A '(' int ')' | n '(' int ')' 
+</RT-code>
 
       <h2>Definitions</h2>
 
@@ -102,37 +103,32 @@
         <li><RT-code>L</RT-code> <strong>L</strong>eft machine</li>
       </ul>
 
-      <p>
-        Each tape machine can be thought of as the composition of two machines, one starts at the head and extends to the right.  The other starts at the head and extends left.
-        This prefix determines which of the two of these machines the command is to be applied to. If it is set to <RT-code>L</RT-code> then the command applies to the left going machine.
-      </p>
 
-      <p>
-        The left going machine is not a separate machine from the right going machine, rather it is a mirrored view. Hence, leftmost cell for the right going machine, is the rightmost cell for the left going machine. Etc. 
-      </p>
+<p>
+  The <RT-code>L</RT-code> prefix selects the mirror view of the tape.
+  In the mirror view, stepping right moves to the original tape’s left neighbor.
+  The mirror view shares the same head and the same tape cells; only the interpretation of direction and “rightmost” is flipped.
+</p>
 
-      <p>
-        Address space, as defined in the TTCA book, is a natural number sequence machine that walks in lock step with the right going machine. Thus, by definition, it is a separate machine. So independent of the view we chose, that of the right going machine, or its mirror image, each cell continues to correspond to the same address as it did for the right going machine.  However, as the sequence of cells is reversed on the left going machine, the sequence of addresses will also be reversed.  Thus, rightmost will have address 0 on the left going machine.
-      </p>
-
+<p>
+  Address space, as defined in TTCA, is provided by a natural number sequence machine that walks in lock step with the right going machine.
+  That address to cell correspondence is fixed for the tape.
+  The <RT-code>L</RT-code> prefix flips only the view.
+  Under the mirror view, the same addresses appear in reverse order across the page, so the mirror view rightmost cell is the cell with address zero.
+</p>
 
       <h3>command</h3>
       <ul>
         <li><RT-code>e</RT-code> <strong>e</strong>ntangle</li>
         <li><RT-code>q</RT-code> <strong>q</strong>uery</li>
         <li><RT-code>r</RT-code> <strong>r</strong>ead</li>
-        <li><RT-code>s</RT-code> <strong>s</strong>tep to place.</li>
+        <li><RT-code>s</RT-code> <strong>s</strong>tep.</li>
         <li><RT-code>w</RT-code> <strong>w</strong>rite</li>
       </ul>
 
       <p>
         The result of the entangle command is a new TM that is entangled with the interfaced machine. By definition, the new entangled machine shares the tape with the original interface machine. Both machines initially have the head on the same cell.
       </p>
-
-      <h3>Machine</h3>
-      <ul>
-        <li><RT-code>L</RT-code> <strong>L</strong>eft machine</li>
-      </ul>
 
       <h3>arg_type</h3>
       <ul>
@@ -142,10 +138,9 @@
       </ul>
 
       <p>
-        Note that here <RT-code>R</RT-code> refers to the rightmost cell as an
-        argument. It does not mean right going machine, as one might surmise given
-        that <RT-code>L</RT-code> means left going machine.
+        <RT-code>R</RT-code> always refers to the rightmost cell of the selected machine.
       </p>
+
 
       <h2>Examples</h2>
       
@@ -166,9 +161,11 @@ sA(0)     ; step to the leftmost cell by address
 sA(3)     ; step to tape[3]
       </RT-code>
 
-      <p>If an <RT-code>LsA(3)</RT-code> command existed, it would return the same value as
-        <RT-code>LsA(3)</RT-code>, because mirroring does not change the correspondence between addresses and cells. For the same reason, <RT-code>LsA(0)</RT-code> would still be the leftmost cell of the right going machine.
-      </p>
+<p>
+  <RT-code>LsA(k)</RT-code> and <RT-code>sA(k)</RT-code> cue the head to the same addressed cell.
+  The <RT-code>L</RT-code> prefix changes direction and the meaning of <RT-code>R</RT-code>, not the address to cell correspondence.
+  Thus <RT-code>LsA(0)</RT-code> cues the cell with address zero, which is rightmost in the mirror view and leftmost in the right going view.
+</p>
 
       
       <h3>Absolute head movement</h3>
@@ -177,7 +174,7 @@ sR         ; step to rightmost
 LsR        ; step to leftmost (rightmost on the mirror machine)
       </RT-code>
 
-      <p>Without code optimization <RT-code>sR</RT-code>   will
+      <p>Without code optimization <RT-code>LsR</RT-code>   will
         be faster than its counterpart <RT-code>sA(0)</RT-code> because the latter
         form requires passing and processing an argument.
         </p>
@@ -188,7 +185,14 @@ qR        ; head is on rightmost
 LqR       ; head is on leftmost
 qA        ; returns address of the head
 qAR       ; returns address of rightmost
+LqAR      ; returns address of leftmost, zero
       </RT-code>      
+
+<p>
+  <RT-code>qAR</RT-code> returns the address of the selected view rightmost cell.
+  Under <RT-code>L</RT-code>, that rightmost cell is the original leftmost cell, so <RT-code>LqAR</RT-code> returns zero.
+</p>
+
 
       <h3>Copying to and from the tape machine cells and python variables.</h3>
 
