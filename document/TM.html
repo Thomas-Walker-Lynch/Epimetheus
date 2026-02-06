@@ -79,130 +79,641 @@
         Caller code uses those predicates to guard against structure changes that would break machines.
       </p>
 
+<h1>Command language</h1>
 
-      <h1>Command reference for the <RT-code>TM_ND</RT-code></h1>
+<p>
+  The command language is not used directly. It describes the letter patterns used to form interface function names.
+  This approach began with LISP, and its extension is described in the paper "Towards a Better Understanding of CAR, CDR, CADR and the Others".
+</p>
 
-      <p>
-        The following commands are available for the Nondestructive First Order Machine. In this version the notation uses strictly ASCII characters.
-      </p>
+<p>
+  The actual function names found on TM interfaces are listed in later sections of this guide. Reading the source code can also help.
+  Later we can add a compiler for creating new functions based on this language. Such a compiler would be a function that adds functions to a TM interface.
+</p>
+
+<p>
+  A TM is constructed with a set of feature symbols that select which parts of the language are available.
+  When no feature symbols are supplied, the result is a non-destructive step right machine with no address space.
+  Feature symbols can enable step left behavior (via the mirror view) and can independently enable address space.
+</p>
 
 
+<h2>For the non-destructive step right machine</h2>
 
-      <h2>Grammar</h2>
+<h3>grammar</h3>
 <RT-code>
-statement  :: ( [machine] command arg* )+
-machine    :: L
+statement  :: ( command [arg]* )+
 command    :: e | q | r | s | w
-arg        :: R | A '(' int ')' | n '(' int ')' 
+arg        :: R | n
 </RT-code>
 
-      <h2>Definitions</h2>
-
-      <h3>Machine</h3>
-      <ul>
-        <li><RT-code>L</RT-code> <strong>L</strong>eft machine</li>
-      </ul>
-
-
+<h4>statement</h4>
 <p>
-  The <RT-code>L</RT-code> prefix selects the mirror view of the tape.
-  In the mirror view, stepping right moves to the original tape’s left neighbor.
-  The mirror view shares the same head and the same tape cells; only the interpretation of direction and “rightmost” is flipped.
+  A statement is parsed left to right. Each command letter begins a new command group.
+  All following <RT-code>arg</RT-code> descriptors attach to that command until the next command letter appears.
+  There are no spaces. Arguments are given to the resulting function in the same order that their descriptors occur in the statement.
 </p>
 
 <p>
-  Address space, as defined in TTCA, is provided by a natural number sequence machine that walks in lock step with the right going machine.
-  That address to cell correspondence is fixed for the tape.
-  The <RT-code>L</RT-code> prefix flips only the view.
-  Under the mirror view, the same addresses appear in reverse order across the page, so the mirror view rightmost cell is the cell with address zero.
+  Accordingly, a function name such as <RT-code>snr(i)</RT-code> denotes two command groups:
+  <RT-code>sn(i)</RT-code> steps right <RT-code>i</RT-code> times, then <RT-code>r</RT-code> copies out the current cell.
 </p>
 
-      <h3>command</h3>
-      <ul>
-        <li><RT-code>e</RT-code> <strong>e</strong>ntangle</li>
-        <li><RT-code>q</RT-code> <strong>q</strong>uery</li>
-        <li><RT-code>r</RT-code> <strong>r</strong>ead</li>
-        <li><RT-code>s</RT-code> <strong>s</strong>tep.</li>
-        <li><RT-code>w</RT-code> <strong>w</strong>rite</li>
-      </ul>
+<h4>command</h4>
+<ul>
+  <li><RT-code>e</RT-code> <strong>e</strong>ntangle</li>
+  <li><RT-code>q</RT-code> <strong>q</strong>uery</li>
+  <li><RT-code>r</RT-code> <strong>r</strong>ead</li>
+  <li><RT-code>s</RT-code> <strong>s</strong>tep</li>
+  <li><RT-code>w</RT-code> <strong>w</strong>rite</li>
+</ul>
 
-      <p>
-        The result of the entangle command is a new TM that is entangled with the interfaced machine. By definition, the new entangled machine shares the tape with the original interface machine. Both machines initially have the head on the same cell.
-      </p>
+<p>
+  Two or more machines are entangled when they share one tape.
+  Entangle differs from clone because the tape is shared rather than copied.
+  What is duplicated is the head state, so entangled heads move independently.
+  A machine produced by <RT-code>e</RT-code> begins with its head on the same cell as the machine it was created from.
+</p>
 
-      <h3>arg_type</h3>
-      <ul>
-        <li><RT-code>A</RT-code> <strong>A</strong>dress</li>
-        <li><RT-code>n</RT-code> <strong>n</strong></li>
-        <li><RT-code>R</RT-code> <strong>R</strong>ightmost</li>
-      </ul>
+<p>
+  The query command, <RT-code>q</RT-code>, reports head state.
+  With no <RT-code>arg</RT-code> descriptor it returns a boolean predicate.
+  With an <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor it answers the rightmost predicate.
+</p>
 
-      <p>
-        <RT-code>R</RT-code> always refers to the rightmost cell of the selected machine.
-      </p>
+<p>
+  TM uses a guard approach for end cases. Query commands appear in control flow so caller code can select the guards it needs and handle end cases explicitly.
+  When guards are unnecessary, caller code can omit them.
+</p>
 
+<p>
+  The <RT-code>r</RT-code> and <RT-code>w</RT-code> commands copy values to and from the current cell.
+  Today they are cell local operations, so direction does not enter.
+</p>
 
-      <h2>Examples</h2>
-      
-      <h3>Relative head movement</h3>
+<p>
+  The <RT-code>s</RT-code> step command moves the head to the right neighbor cell.
+  When <RT-code>s</RT-code> is given an <RT-code>n</RT-code> <RT-code>arg</RT-code> descriptor, it performs <RT-code>n</RT-code> right steps.
+  On a step right only machine, <RT-code>n</RT-code> must be positive.
+</p>
 
-      <RT-code>
+<h4>arg</h4>
+<ul>
+  <li><RT-code>n</RT-code> <strong>n</strong></li>
+  <li><RT-code>R</RT-code> <strong>R</strong>ightmost</li>
+</ul>
+
+<p>
+  The <RT-code>n</RT-code> <RT-code>arg</RT-code> descriptor supplies a repetition count.
+</p>
+
+<p>
+  The <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor focuses the command on the rightmost cell.
+  For <RT-code>qR</RT-code>, the result is true iff the head is on rightmost.
+  For <RT-code>sR</RT-code>, the effect is to cue the head to rightmost.
+</p>
+
+<h3>Examples</h3>
+
+<h4>Relative head movement</h4>
+<RT-code>
 s         ; step to right neighbor
-Ls        ; step to left neighbor (stepping right on the mirror image machine)
-sn(0)     ; no-op
+sn(1)     ; step to right neighbor
 sn(2)     ; step to right neighbor twice
-Lsn(2)    ; step to left neighbor twice (stepping right on the mirror image machine)
-      </RT-code>
+</RT-code>
 
-      <h3>Head movement relative to leftmost</h3>
+<h4>Absolute head movement</h4>
+<RT-code>
+sR        ; cue the head to rightmost
+</RT-code>
 
-      <RT-code>
-sA(0)     ; step to the leftmost cell by address
-sA(3)     ; step to tape[3]
-      </RT-code>
+<h4>Query</h4>
+<RT-code>
+qR        ; true iff head is on rightmost
+</RT-code>
+
+<h4>Copying to and from tape cells and python variables</h4>
+<RT-code>
+r          ; copies cell contents to the LHS of an assignment
+w(v)       ; copies v into the cell
+</RT-code>
+
+
+<h2>For the non-destructive machine that has step left</h2>
+
+<p>
+  The step right grammar extends to left going behavior by introducing a mirror view of a machine.
+  In the mirror view, every rightward operation corresponds to the base machine’s leftward operation, so new command letters are unnecessary.
+  What is rightmost in the base view becomes leftmost in the mirror view, and vice versa.
+</p>
+
+<p>
+  In this extended grammar, the <RT-code>L</RT-code> prefix selects the mirror view for the command group that follows it.
+  <RT-code>L</RT-code> affects direction sensitive operations such as stepping, moving to rightmost, and scans.
+  Today <RT-code>r</RT-code> and <RT-code>w</RT-code> are cell local, so <RT-code>L</RT-code> does not change their behavior.
+</p>
+
+<p>
+  Step left support does not imply address space.
+  A machine can support <RT-code>L</RT-code> while still omitting address operations.
+  When address space is enabled as an additional feature, the <RT-code>A</RT-code> <RT-code>arg</RT-code> descriptor becomes available and address based cue and query forms become legal.
+  When <RT-code>L</RT-code> is available, <RT-code>n</RT-code> can also be negative, with the sign selecting the direction in the base view.
+</p>
+
+<h3>grammar</h3>
+<RT-code>
+statement  :: ( [machine] command [arg]* )+
+machine    :: L
+command    :: e | q | r | s | w
+arg        :: R | A | n
+</RT-code>
+
+<p>
+  Address space, as defined in the TTCA book, is a natural number sequence machine that walks the tape of a base machine and establishes a one to one correspondence between natural numbers and tape cells.
+  That correspondence belongs to the tape and stays fixed when we change the view.
+  For example, consider a tape with cells <RT-code>[c_0 ,c_1 ,c_2 ,c_3 ,c_4]</RT-code>, where <RT-code>c_4</RT-code> is rightmost and has address 4.
+  In the mirror view we write the same cells as <RT-code>[c_4 ,c_3 ,c_2 ,c_1 ,c_0]</RT-code>.
+  In that view <RT-code>c_4</RT-code> sits at the left edge, and it still has address 4.
+  A right step from <RT-code>c_4</RT-code> in the mirror view lands on <RT-code>c_3</RT-code>, which matches a left step from <RT-code>c_4</RT-code> in the base view.
+</p>
+
+<h3>Examples</h3>
+
+<p>
+  The example descriptions state effects in the base view.
+  Effects in the mirror view match the same command without the <RT-code>L</RT-code> prefix.
+</p>
+
+<h4>Relative head movement</h4>
+<RT-code>
+Ls        ; step to left neighbor
+Lsn(2)    ; step to left neighbor twice
+sn(-2)    ; step to left neighbor twice
+sn(2)     ; step to right neighbor twice
+</RT-code>
+
+<h4>Head movement relative to leftmost</h4>
+<RT-code>
+sA(0)     ; cue the head to the leftmost cell by address
+sA(3)     ; cue the head to tape[3]
+</RT-code>
 
 <p>
   <RT-code>LsA(k)</RT-code> and <RT-code>sA(k)</RT-code> cue the head to the same addressed cell.
-  The <RT-code>L</RT-code> prefix changes direction and the meaning of <RT-code>R</RT-code>, not the address to cell correspondence.
-  Thus <RT-code>LsA(0)</RT-code> cues the cell with address zero, which is rightmost in the mirror view and leftmost in the right going view.
+  <RT-code>L</RT-code> flips direction and the meaning of <RT-code>R</RT-code>, not the address to cell correspondence.
+  Thus <RT-code>LsA(0)</RT-code> cues the cell with address zero, which is rightmost in the mirror view and leftmost in the base view.
+  For that reason there is no primitive family for <RT-code>LsA</RT-code> distinct from <RT-code>sA</RT-code>.
 </p>
 
-      
-      <h3>Absolute head movement</h3>
-      <RT-code>
-sR         ; step to rightmost
-LsR        ; step to leftmost (rightmost on the mirror machine)
-      </RT-code>
+<h4>Absolute head movement</h4>
+<RT-code>
+LsR       ; cue the head to leftmost
+sR        ; cue the head to rightmost
+</RT-code>
 
-      <p>Without code optimization <RT-code>LsR</RT-code>   will
-        be faster than its counterpart <RT-code>sA(0)</RT-code> because the latter
-        form requires passing and processing an argument.
-        </p>
+<p>
+  Without code optimization <RT-code>LsR</RT-code> will be faster than <RT-code>sA(0)</RT-code>, because <RT-code>sA</RT-code> requires passing and processing an argument.
+</p>
 
-      <h3>Query</h3>
-      <RT-code>
-qR        ; head is on rightmost
+<h4>Query</h4>
+<RT-code>
 LqR       ; head is on leftmost
-qA        ; returns address of the head
-qAR       ; returns address of rightmost
-LqAR      ; returns address of leftmost, zero
-      </RT-code>      
+qR        ; head is on rightmost
+qA        ; address of the head
+qAR       ; address of rightmost
+LqAR      ; address of leftmost, typically zero
+</RT-code>
+
+<p>
+  In <RT-code>q</RT-code>, the <RT-code>A</RT-code> <RT-code>arg</RT-code> descriptor selects an address valued result.
+  By default <RT-code>q</RT-code> returns a boolean predicate.
+  In other commands, an <RT-code>A</RT-code> <RT-code>arg</RT-code> descriptor indicates that an address argument is supplied.
+</p>
+
+<p>
+  The <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor focuses the command on the selected view rightmost cell.
+  For <RT-code>qR</RT-code>, the result is true iff the head is on rightmost.
+  For <RT-code>qAR</RT-code>, the result is the address of rightmost.
+  Under <RT-code>L</RT-code>, that rightmost cell is the base view leftmost cell, so <RT-code>LqAR</RT-code> returns the address of leftmost, typically zero.
+</p>
+
+<h4>Copying to and from tape cells and python variables</h4>
+<RT-code>
+r          ; copies cell contents to the LHS of an assignment
+w(v)       ; copies v into the cell
+</RT-code>
+
+<p>
+  The current <RT-code>r</RT-code> and <RT-code>w</RT-code> are cell local and are unaffected by <RT-code>L</RT-code>.
+  If we later support list forms or repetition forms for copy, <RT-code>L</RT-code> will affect the scan direction for those operations.
+</p>
+
+
+
+<h1>Command language</h1>
+
+<p>
+  The command language is not used directly. It describes the letter patterns used to form interface function names.
+  This approach began with LISP, and its extension is described in the paper "Towards a Better Understanding of CAR, CDR, CADR and the Others".
+</p>
+
+<p>
+  The actual function names found on TM interfaces are listed in later sections of this guide. Reading the source code can also help.
+  Later we can add a compiler for creating new functions based on this language. Such a compiler would be a function that adds methods to a TM instance.
+</p>
+
+<h2>For the non-destructive step right machine</h2>
+
+<h3>grammar</h3>
+<RT-code>
+statement  :: ( command [arg]* )+
+command    :: e | q | r | s | w
+arg        :: R | A | n
+</RT-code>
+
+<h4>statement</h4>
+<p>
+  A statement is parsed left to right. Each command letter begins a new command group.
+  All following <RT-code>arg</RT-code> descriptors attach to that command until the next command letter appears.
+  There are no spaces. Arguments are given to the resulting function in the same order that their descriptors occur in the statement.
+</p>
+
+<p>
+  Accordingly, a function name such as <RT-code>sAr(i)</RT-code> denotes two command groups:
+  <RT-code>sA(i)</RT-code> cues the head to address <RT-code>i</RT-code>, then <RT-code>r</RT-code> copies out the current cell.
+</p>
+
+<h4>command</h4>
+<ul>
+  <li><RT-code>e</RT-code> <strong>e</strong>ntangle</li>
+  <li><RT-code>q</RT-code> <strong>q</strong>uery</li>
+  <li><RT-code>r</RT-code> <strong>r</strong>ead</li>
+  <li><RT-code>s</RT-code> <strong>s</strong>tep</li>
+  <li><RT-code>w</RT-code> <strong>w</strong>rite</li>
+</ul>
+
+<p>
+  Two or more machines are entangled when they share one tape.
+  Entangle differs from clone because the tape is shared rather than copied.
+  What is duplicated is the head state, so entangled heads move independently.
+  A machine produced by <RT-code>e</RT-code> begins with its head on the same cell as the machine it was created from.
+</p>
+
+<p>
+  The query command, <RT-code>q</RT-code>, reports head state.
+  With no <RT-code>arg</RT-code> descriptor it returns a boolean predicate.
+  With an <RT-code>A</RT-code> <RT-code>arg</RT-code> descriptor it returns an address.
+  With an <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor it answers the rightmost predicate.
+  With <RT-code>AR</RT-code> it returns the address of rightmost.
+</p>
+
+<p>
+  TM uses a guard approach for end cases. Query commands appear in control flow so caller code can select the guards it needs and handle end cases explicitly.
+  When guards are unnecessary, caller code can omit them.
+</p>
+
+<p>
+  The <RT-code>r</RT-code> and <RT-code>w</RT-code> commands copy values to and from the current cell.
+  Today they are cell local operations, so direction does not enter.
+</p>
+
+<p>
+  The <RT-code>s</RT-code> step command moves the head to the right neighbor cell.
+  When <RT-code>s</RT-code> is given an <RT-code>n</RT-code> <RT-code>arg</RT-code> descriptor, it performs <RT-code>n</RT-code> right steps.
+</p>
+
+<h4>arg</h4>
+<ul>
+  <li><RT-code>A</RT-code> <strong>A</strong>ddress</li>
+  <li><RT-code>n</RT-code> <strong>n</strong></li>
+  <li><RT-code>R</RT-code> <strong>R</strong>ightmost</li>
+</ul>
+
+<p>
+  In <RT-code>q</RT-code>, the <RT-code>A</RT-code> <RT-code>arg</RT-code> descriptor selects an address valued result.
+  By default <RT-code>q</RT-code> returns a boolean predicate.
+  In other commands, an <RT-code>A</RT-code> <RT-code>arg</RT-code> descriptor indicates that an address argument is supplied.
+</p>
+
+<p>
+  The <RT-code>n</RT-code> <RT-code>arg</RT-code> descriptor supplies a repetition count.
+</p>
+
+<p>
+  The <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor focuses the command on the rightmost cell.
+  For <RT-code>qR</RT-code>, the result is true iff the head is on rightmost.
+  For <RT-code>sR</RT-code>, the effect is to cue the head to rightmost.
+  For <RT-code>qAR</RT-code>, the result is the address of rightmost.
+</p>
+
+<h3>Examples</h3>
+
+<h4>Relative head movement</h4>
+<RT-code>
+s         ; step to right neighbor
+sn(0)     ; no-op
+sn(2)     ; step to right neighbor twice
+</RT-code>
+
+<h4>Head movement relative to leftmost</h4>
+<RT-code>
+sA(0)     ; cue the head to the leftmost cell by address
+sA(3)     ; cue the head to tape[3]
+</RT-code>
+
+<h4>Absolute head movement</h4>
+<RT-code>
+sR        ; cue the head to rightmost
+</RT-code>
+
+<h4>Query</h4>
+<RT-code>
+qR        ; true iff head is on rightmost
+qA        ; address of the head
+qAR       ; address of rightmost
+</RT-code>
+
+<h4>Copying to and from tape cells and python variables</h4>
+<RT-code>
+r          ; copies cell contents to the LHS of an assignment
+w(v)       ; copies v into the cell
+</RT-code>
+
+
+<h2>For the non-destructive machine that has step left</h2>
+
+<p>
+  The step right grammar extends to left going behavior by introducing a mirror view of a machine.
+  In the mirror view, every rightward operation corresponds to the base machine’s leftward operation, so new command letters are unnecessary.
+  What is rightmost in the base view becomes leftmost in the mirror view, and vice versa.
+</p>
+
+<p>
+  In this extended grammar, the <RT-code>L</RT-code> prefix selects the mirror view for the command group that follows it.
+  <RT-code>L</RT-code> affects direction sensitive operations such as stepping, moving to rightmost, and scans.
+  Today <RT-code>r</RT-code> and <RT-code>w</RT-code> are cell local, so <RT-code>L</RT-code> does not change their behavior.
+</p>
+
+<h3>grammar</h3>
+<RT-code>
+statement  :: ( [machine] command [arg]* )+
+machine    :: L
+command    :: e | q | r | s | w
+arg        :: R | A | n
+</RT-code>
+
+<p>
+  Address space, as defined in the TTCA book, is a natural number sequence machine that walks the tape of a base machine and establishes a one to one correspondence between natural numbers and tape cells.
+  That correspondence belongs to the tape and stays fixed when we change the view.
+  For example, consider a tape with cells <RT-code>[c_0 ,c_1 ,c_2 ,c_3 ,c_4]</RT-code>, where <RT-code>c_4</RT-code> is rightmost and has address 4.
+  In the mirror view we write the same cells as <RT-code>[c_4 ,c_3 ,c_2 ,c_1 ,c_0]</RT-code>.
+  In that view <RT-code>c_4</RT-code> sits at the left edge, and it still has address 4.
+  A right step from <RT-code>c_4</RT-code> in the mirror view lands on <RT-code>c_3</RT-code>, which matches a left step from <RT-code>c_4</RT-code> in the base view.
+</p>
+
+<h3>Examples</h3>
+
+<p>
+  The example descriptions state effects in the base view.
+  Effects in the mirror view match the same command without the <RT-code>L</RT-code> prefix.
+</p>
+
+<h4>Relative head movement</h4>
+<RT-code>
+Ls        ; step to left neighbor
+Lsn(2)    ; step to left neighbor twice
+</RT-code>
+
+<h4>Head movement relative to leftmost</h4>
+<RT-code>
+sA(0)     ; cue the head to the leftmost cell by address
+sA(3)     ; cue the head to tape[3]
+</RT-code>
+
+<p>
+  <RT-code>LsA(k)</RT-code> and <RT-code>sA(k)</RT-code> cue the head to the same addressed cell.
+  <RT-code>L</RT-code> flips direction and the meaning of <RT-code>R</RT-code>, not the address to cell correspondence.
+  Thus <RT-code>LsA(0)</RT-code> cues the cell with address zero, which is rightmost in the mirror view and leftmost in the base view.
+  For that reason there is no primitive family for <RT-code>LsA</RT-code> distinct from <RT-code>sA</RT-code>.
+</p>
+
+<h4>Absolute head movement</h4>
+<RT-code>
+LsR       ; cue the head to leftmost
+</RT-code>
+
+<p>
+  Without code optimization <RT-code>LsR</RT-code> will be faster than <RT-code>sA(0)</RT-code>, because <RT-code>sA</RT-code> requires passing and processing an argument.
+</p>
+
+<h4>Query</h4>
+<RT-code>
+LqR       ; head is on leftmost
+LqAR      ; address of leftmost, typically zero
+</RT-code>
 
 <p>
   <RT-code>qAR</RT-code> returns the address of the selected view rightmost cell.
-  Under <RT-code>L</RT-code>, that rightmost cell is the original leftmost cell, so <RT-code>LqAR</RT-code> returns zero.
+  Under <RT-code>L</RT-code>, that rightmost cell is the base view leftmost cell, so <RT-code>LqAR</RT-code> returns the address of leftmost, typically zero.
+</p>
+
+<h4>Copying to and from tape cells and python variables</h4>
+<RT-code>
+r          ; copies cell contents to the LHS of an assignment
+w(v)       ; copies v into the cell
+</RT-code>
+
+<p>
+  The current <RT-code>r</RT-code> and <RT-code>w</RT-code> are cell local and are unaffected by <RT-code>L</RT-code>.
+  If we later support list forms or repetition forms for copy, <RT-code>L</RT-code> will affect the scan direction for those operations.
 </p>
 
 
-      <h3>Copying to and from the tape machine cells and python variables.</h3>
+      <h1>Primitive method reference</h1>
+
+      <p>
+        This section lists the concrete methods exposed by the Python/C implementation.
+        These methods implement a selected subset of the command grammar.
+        The grammar defines a command language, while the primitive set defines the operations the library exposes directly.
+        Later sections can introduce a compile layer that accepts additional command combinations.
+      </p>
+
+      <p>
+        The <RT-code>L</RT-code> prefix is not implemented as a distinct family of primitives.
+        It selects the mirror view in the command language.
+        In the API, the same effect is provided by explicit left variants such as <RT-code>ls()</RT-code> and <RT-code>lsn(n)</RT-code>.
+      </p>
+
+      <h2>Navigation primitives</h2>
+
+      <p>
+        The navigation primitives implement the <RT-code>s</RT-code> command with the argument forms <RT-code>ε</RT-code> and <RT-code>n(int)</RT-code>.
+        The left variants implement the mirror view behavior directly.
+      </p>
+
+      <ul>
+        <li><RT-code>s()</RT-code> steps to the right neighbor. (Command form: <RT-code>s</RT-code>.)</li>
+        <li><RT-code>sn(n)</RT-code> steps right <RT-math>n</RT-math> times. (Command form: <RT-code>sn(n)</RT-code>.)</li>
+        <li><RT-code>ls()</RT-code> steps to the left neighbor. (Command form: <RT-code>Ls</RT-code>.)</li>
+        <li><RT-code>lsn(n)</RT-code> steps left <RT-math>n</RT-math> times. (Command form: <RT-code>Lsn(n)</RT-code>.)</li>
+        <li><RT-code>Rs()</RT-code> cues the selected machine rightmost. (Command form: <RT-code>sR</RT-code>.)</li>
+        <li><RT-code>Ls()</RT-code> cues the selected machine leftmost. (Command form: <RT-code>LsR</RT-code>.)</li>
+      </ul>
+
+      <p>
+        Note the correspondence: <RT-code>sR</RT-code> cues rightmost in the right going view, and <RT-code>LsR</RT-code> cues leftmost in that same underlying tape.
+        The primitives <RT-code>Rs()</RT-code> and <RT-code>Ls()</RT-code> are optimized forms of those cues.
+      </p>
+
+      <h2>Input and output primitives</h2>
+
+      <p>
+        The I/O primitives implement <RT-code>r</RT-code> and <RT-code>w(value)</RT-code>.
+        In the command language, <RT-code>r</RT-code> reads the current cell payload, and <RT-code>w(v)</RT-code> writes a payload to the current cell.
+      </p>
+
+      <ul>
+        <li><RT-code>r()</RT-code> reads the current cell.</li>
+        <li><RT-code>w(v)</RT-code> writes <RT-code>v</RT-code> to the current cell.</li>
+      </ul>
+
+      <p>
+        Bulk forms exist in the API, but they are not represented in the current command grammar.
+        They are library level conveniences built on top of repeated primitive behavior.
+      </p>
+
+      <ul>
+        <li><RT-code>rn(n)</RT-code> reads <RT-math>n</RT-math> cells.</li>
+        <li><RT-code>wn(list)</RT-code> writes a list of values.</li>
+      </ul>
+
+      <h2>Query primitives</h2>
+
+      <p>
+        Query primitives expose the <RT-code>q</RT-code> command.
+        In the command language, query arguments refine what is being queried.
+      </p>
+
+      <ul>
+        <li><RT-code>qA()</RT-code> returns the current head address. (Command form: <RT-code>qA</RT-code>.)</li>
+        <li><RT-code>qR()</RT-code> returns whether the head is on the selected view rightmost cell. (Command form: <RT-code>qR</RT-code>.)</li>
+        <li><RT-code>qAR()</RT-code> returns the address of the selected view rightmost cell. (Command form: <RT-code>qAR</RT-code>.)</li>
+      </ul>
+
+      <p>
+        The mirror view query forms follow the same rule.
+        For example, <RT-code>LqR</RT-code> tests the leftmost of the underlying tape, and <RT-code>LqAR</RT-code> returns its address, which is zero.
+      </p>
+
+      <h2>Entanglement primitives</h2>
+
+      <p>
+        Entanglement primitives implement the <RT-code>e</RT-code> command.
+        The entangled machine shares the tape with the original and starts on the same cell.
+      </p>
+
+      <ul>
+        <li><RT-code>e()</RT-code> returns a new entangled machine sharing the same tape and safety catalog. (Command form: <RT-code>e</RT-code>.)</li>
+      </ul>
+
+      <p>
+        Combined command forms such as <RT-code>es</RT-code> or <RT-code>els</RT-code> are legal in the grammar, but they are not required as primitives.
+        The library can expose such combinations as convenience calls, or generate them through a compile layer.
+        The core model remains that a statement is a sequence of commands applied to a selected view.
+      </p>
+
+      <h1>Usage</h1>
+
+      <h2>First order TM properties</h2>
+
+      <p>
+        For a first order TM these properties are always true.
+      </p>
+
+      <ol>
+        <li>The head is always on a valid cell.</li>
+        <li>All cells return a value when read.</li>
+      </ol>
+
+      <p>
+        In order to maintain these properties, a TM uses inclusive bounds for intervals.
+        An interval is marked by placing a head on the leftmost cell of the interval, and placing an entangled head on the rightmost cell of the interval.
+      </p>
+
+      <h2>Contract with the programmer</h2>
+
+      <p>
+        Some first order TM types rely upon the caller to maintain a contract.
+        Such machines typically have debug variants that add contract checks.
+        For some machines, breaking the contract limits compiler optimization.
+        For other machines, breaking the contract causes program bugs.
+      </p>
+
+      <p>
+        <strong>Contract:</strong>
+      </p>
+
+      <ol>
+        <li>When there is a right bound, the caller guarantees they will never command the machine to step beyond the rightmost cell.</li>
+        <li>When there is a left bound, the caller guarantees they will never command the machine to step left of the leftmost cell.</li>
+      </ol>
+
+      <p>
+        When traversing a tape, the contract is fulfilled by a First Rest pattern.
+      </p>
+
+      <h1>First Rest pattern with initialization</h1>
 
       <RT-code>
-r          ; copies cell contents to the LHS of an assignment
-w(v)       ; copies v into the cell
-      </RT-code>      
+# Pattern 1: First Rest (Initialize with First)
+# Useful when the accumulator starts with the first value.
+total = tm.r()      # Process First
+while not tm.qR():  # Guard: Is there a Rest?
+    tm.s()          # Step (Protected)
+    total += tm.r() # Process Next
+      </RT-code>
 
-    
+      <p>
+        Here <RT-code>tm.qR()</RT-code> queries whether the head is on the selected view rightmost cell.
+        It guards the step in the loop.
+        No redundant tests are done, and the loop ends without stepping off the tape.
+      </p>
 
+      <h1>First Rest pattern without initialization</h1>
+
+      <p>
+        Sometimes the accumulator is initialized to an identity value (such as zero) before the loop starts.
+        In that form, the loop and a half structure is natural.
+      </p>
+
+      <RT-code>
+# Conceptual "do" loop
+do:
+    total += tm.r()   # Always process the current cell
+    if tm.qR() break  # Middle break: if at rightmost, stop
+    tm.s()            # Step only when not at the end
+      </RT-code>
+
+      <p>
+        Python has no <RT-code>do</RT-code> statement, so the same logic is written explicitly:
+      </p>
+
+      <RT-code>
+# Python implementation
+while True:
+    total += tm.r()
+    if tm.qR(): break
+    tm.s()
+      </RT-code>
+
+      <p>
+        The middle test <RT-code>tm.qR()</RT-code> guards <RT-code>tm.s()</RT-code>, so the machine never steps beyond rightmost.
+      </p>
+
+
+
+
+      
       <h1>Primitive method reference</h1>
 
       <p>
