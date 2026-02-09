@@ -51,27 +51,27 @@
       </p>
 
       <p>
-        If an operation were permitted to remove the last remaining cell, said first order invariant would be broken and the interface would stop being total.  A working TM that supported such a deletion would need status logic that represents the empty state.  That status logic would either be embedded inside the TM operations as edge handling, or be represented explicitly as a separate status machine layered above the base TM.  Either choice represents a shift in level of analysis being done, and therefore would lead to the construction of a distinct <RT-term>second order</RT-term> tape machine.
+        If an operation were permitted to remove the last remaining cell of a tape, said first order invariant would be broken and the interface would stop being total.  A working TM that supported such a deletion would need status logic that represents the empty state.  That status logic would either be embedded inside the TM operations as edge handling, or be represented explicitly as a separate status machine layered above the base TM.  Either choice represents a shift in level of analysis being done, and therefore would lead to the construction of a distinct <RT-term>second order</RT-term> tape machine.
       </p>
 
       <p>
-        Tape machines that share a tape are said to be <RT-neologism>entangled</RT-neologism>. There will be both data and control hazards among entangled machines. Data hazards have to do with one machine writing data being read by another, either unexpectedly, or in the wrong temporal order. Data hazards can lead to incorrectly computed results, but they will not break the machines. In contrast, control hazards lead to broken machines. The principle control hazard is that of one entangled TM deleting a cell that another TM is visiting. That orphans the head of that other machine and leads to a violation of the <em>a tape machine head is always on a valid cell</em>. We leave the data hazard management to the programmer; however, we provide specific features for preventing control hazards.
+        Tape machines that share a tape are said to be <RT-neologism>entangled</RT-neologism>. There will be both data and structure hazards among entangled machines. Data hazards have to do with the misuse of locks or other mistakes in cooperation between machines that cause a machine to read the wrong data. Data hazards can lead to incorrectly computed results, but they will not break the machines. In contrast, structure hazards lead to broken machines. The principle structure hazard is that of one entangled TM deleting a cell that another TM has its head on. That orphans the head of that other machine and leads to a violation of the <em>a tape machine head is always on a valid cell</em> invariant. 
       </p>
 
       <p>
-        TM machines incorporate various approaches for managing  entanglement and avoiding control hazards. These are chosen as features at construction time. In one approach, no methods are placed on the interface that can destroy tape cells. This supports a non-destructive programming paradigm, so such machines are said to be <RT-term>non-destructive</RT-term>. Without destructive operations, entangled machines simply do not have the ability to break each other.  In a second approach, the interface is configured so there are no functions for entangling machines in the first place. Each <RT-neologism>solitary machine</RT-neologism> can safely perform destructive operations because no other machine shares its tape.  As a third approach, each group of entangled machines shares a catalog listing all machines in the group. Caller code can guard operations by querying whether a planned operation is safe before attempting it. This third strategy is called <RT-neologism>entanglement accounting</RT-neologism>. During the time of execution of the guard and operation, each tape machine must be able to lockout others from access to the catalog.  Yet another approach is for the programmer, compiler, or external function to prove code is safe, which is the same as proving that guard code is not needed.
+        We leave the data hazard management to the programmer; however, we provide specific features for avoiding  structure hazards.
+        These are selected at TM construction time. In one approach, no methods are placed on the interface that can destroy tape cells. This supports a non-destructive programming paradigm, so such machines are said to be <RT-term>non-destructive</RT-term>. Without destructive operations, entangled machines simply do not have the ability to break each other.  In a second approach, the interface is configured so there are no functions for entangling machines in the first place. Each <RT-neologism>solitary machine</RT-neologism> can safely perform destructive operations because no other machine shares its tape.  As a third approach, each group of entangled machines shares a catalog listing all machines in the group. Caller code can guard operations by querying whether a planned operation is safe before attempting it. This third strategy is called <RT-neologism>entanglement accounting</RT-neologism>. During the time of execution of the guard and operation, each tape machine must be able to lockout others from access to the catalog.  Yet another approach is for the programmer, compiler, or external function to prove code is safe, which is the same as proving that guard code is not needed. An alternative is to use a compiler that only produces correct code in the first place.  This is the approach of <RT-term>correct by construction</RT-term>.
       </p>
 
       <h1>Command language</h1>
 
       <p>
-        The command language is not used directly. It describes the letter patterns used to form TM interface function names.
-        This approach began with LISP, and its extension is described in the paper "Towards a Better Understanding of CAR, CDR, CADR and the Others".
+        The command language is not used directly, rather it describes the letter patterns used to form TM interface function names.
+        Such an approach can be found in LISP language list access function names, and its extension is described in the paper "Towards a Better Understanding of CAR, CDR, CADR and the Others".
       </p>
 
       <p>
-        The actual function names found on TM interfaces are listed in later sections of this guide. Reading the source code can also help.
-        Later we can add a compiler for creating new functions based on this language. Such a compiler would be a function that adds functions to a TM interface.
+        The actual function names found on TM interfaces are listed in later sections of this guide. The ultimate authority is the source code itself. Later we can add a compiler for creating new functions based on this language. Such a compiler would be a function that adds functions to a TM interface.
       </p>
 
       <p>
@@ -119,7 +119,7 @@
       <p>
         The query command, <RT-code>q</RT-code>, reports head state.
         With no <RT-code>arg</RT-code> descriptor it returns a boolean value.
-        With an <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor it returns true iff the head is on the rightmost cell.
+        With an <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor it returns true iff the head is on the rightmost cell. With an <RT-code>I</RT-code> <RT-code>arg</RT-code> descriptor it returns an index.
       </p>
 
       <p>
@@ -221,8 +221,7 @@
       <h3>Examples</h3>
 
       <p>
-        The example descriptions state effects in the base view.
-        Effects in the mirror view match the same command without the <RT-code>L</RT-code> prefix.
+        In these examples, the comments discuss what happens on the base machine. Effects in the mirror view match the same command without the <RT-code>L</RT-code> prefix.
       </p>
 
       <h4>Relative head movement</h4>
@@ -243,7 +242,6 @@
         <RT-code>LsI(k)</RT-code> and <RT-code>sI(k)</RT-code> cue the head to the same indexed cell.
         <RT-code>L</RT-code> flips direction and the meaning of <RT-code>R</RT-code>, not the index to cell correspondence.
         Thus <RT-code>LsI(0)</RT-code> cues the cell with index zero, which is rightmost in the mirror view and leftmost in the base view.
-        For that reason there is no primitive family for <RT-code>LsI</RT-code> distinct from <RT-code>sI</RT-code>.
       </p>
 
       <h4>Absolute head movement</h4>
@@ -266,7 +264,7 @@
       </RT-code>
 
       <p>
-        In <RT-code>q</RT-code>, the <RT-code>I</RT-code> <RT-code>arg</RT-code> descriptor selects an index valued result.
+        The <RT-code>I</RT-code> <RT-code>arg</RT-code> descriptor causes <RT-code>q</RT-code> to return an index.
         By default <RT-code>q</RT-code> returns a boolean value.
         In other commands, an <RT-code>I</RT-code> <RT-code>arg</RT-code> descriptor indicates that an index argument is supplied.
       </p>
@@ -370,7 +368,7 @@
       <h2>Query primitives</h2>
 
       <p>
-        Query primitives expose the <RT-code>q</RT-code> command.
+        Query primitives are built from the <RT-code>q</RT-code> command.
         On the step right only machine, the primitive set covers the boolean query forms.
         When indexing is enabled as an additional feature, index valued query forms become available.
       </p>
@@ -381,27 +379,24 @@
 
       <p>
         If indexing is enabled, the API also exposes index query primitives.
-        These correspond to the <RT-code>A</RT-code> arg descriptor in the command language.
-        (If you later rename <RT-code>A</RT-code> to <RT-code>I</RT-code>, this section becomes <RT-code>qI</RT-code> and <RT-code>qIR</RT-code> accordingly.)
+        These correspond to the <RT-code>I</RT-code> arg descriptor in the command language.
       </p>
 
       <ul>
-        <li><RT-code>qA()</RT-code> returns the current head index. (Command form: <RT-code>qA</RT-code>.)</li>
-        <li><RT-code>qAR()</RT-code> returns the index of the selected view rightmost cell. (Command form: <RT-code>qAR</RT-code>.)</li>
+        <li><RT-code>qI()</RT-code> returns the current head index. (Command form: <RT-code>qI</RT-code>.)</li>
+        <li><RT-code>qIR()</RT-code> returns the index of the selected view rightmost cell. (Command form: <RT-code>qIR</RT-code>.)</li>
       </ul>
 
       <p>
         Mirror view query forms follow the same rule in the command language.
-        For example, <RT-code>LqR</RT-code> tests the leftmost of the underlying tape, and <RT-code>LqAR</RT-code> returns its index, typically zero.
-        In the API, that effect is obtained either by left primitives (for <RT-code>LqR</RT-code> this is <RT-code>lsqR()</RT-code> if such a helper exists), or by explicit equivalences such as “leftmost test” implemented via the leftmost cue or by comparing to a known bound head.
-        The primitive set stays small, and higher level forms live in friend or workspace layers.
+        For example, <RT-code>LqR</RT-code> tests the leftmost of the underlying tape, and <RT-code>LqIR</RT-code> returns its index, typically zero.
       </p>
 
       <h2>Entanglement primitives</h2>
 
       <p>
         Entanglement primitives implement the <RT-code>e</RT-code> command.
-        The entangled machine shares the tape with the original and starts on the same cell.
+        The entangled machine shares the tape with the original machine and and initially have their head on the same cell.
         In entanglement accounting configurations, entangled machines also share the group catalog used by guard predicates.
       </p>
 
@@ -429,8 +424,7 @@
       </ol>
 
       <p>
-        In order to maintain these properties, a TM uses inclusive bounds for intervals.
-        An interval is marked by placing a head on the leftmost cell of the interval, and placing an entangled head on the rightmost cell of the interval.
+        In order to maintain these properties, a TM uses inclusive bounds for intervals, including intervals of cells, and intervals of indexes.
       </p>
 
       <h2>Contract with the programmer</h2>
@@ -447,8 +441,8 @@
       </p>
 
       <ol>
-        <li>When there is a right bound, the caller guarantees they will never command the machine to step beyond the rightmost cell.</li>
-        <li>When there is a left bound, the caller guarantees they will never command the machine to step left of the leftmost cell.</li>
+        <li>When there is a right bound, the caller guarantees that he will never command the machine to step beyond the rightmost cell.</li>
+        <li>When there is a left bound, the caller guarantees that he will never command the machine to step left of the leftmost cell.</li>
       </ol>
 
       <p>
