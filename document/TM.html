@@ -365,6 +365,45 @@
         <li><RT-code>wn(list)</RT-code> writes a list of values.</li>
       </ul>
 
+<h2>Destructive Primitives</h2>
+
+      <p>
+        Machines configured with the <RT-code>SO</RT-code> (Solitary) entanglement approach may expose primitives that modify the tape structure.
+        These are distinct from <RT-code>w</RT-code> (which modifies cell <em>content</em>) because they change the cell <em>count</em> or <em>sequence</em>.
+      </p>
+
+      <p>
+        <strong>Note:</strong> Not all container types support all destructive operations. For example, <RT-code>ARR</RT-code> (Fixed Array) does not support deletion or insertion, whereas <RT-code>ARRV</RT-code> (Variable Array) does.
+      </p>
+
+      <h3>Delete (<RT-code>d</RT-code>)</h3>
+      <p>
+        Removes cells from the tape. The head typically lands on the right neighbor of the deleted segment.
+      </p>
+      <ul>
+        <li><RT-code>d()</RT-code>: Deletes the current cell.</li>
+        <li><RT-code>dn(n)</RT-code>: Deletes <RT-code>n</RT-code> cells starting from current.</li>
+        <li><RT-code>dR()</RT-code>: Deletes from current to Rightmost (inclusive).</li>
+        <li><RT-code>dL()</RT-code>: Deletes from current to Leftmost (inclusive).</li>
+      </ul>
+
+      <h3>Delete Neighbor (<RT-code>esd</RT-code>)</h3>
+      <p>
+        A compound-style primitive that deletes a neighbor without moving the active head.
+        Mnemonic: <em>Entangle-Step-Delete</em> (conceptually acts on the neighbor).
+      </p>
+      <ul>
+        <li><RT-code>esd()</RT-code>: Deletes the immediate right neighbor. Guard: Requires <RT-code>not qR()</RT-code>.</li>
+        <li><RT-code>esdn(n)</RT-code>: Deletes <RT-code>n</RT-code> right neighbors.</li>
+        <li><RT-code>Lesd()</RT-code>: Deletes the immediate left neighbor. Guard: Requires <RT-code>not qL()</RT-code>.</li>
+      </ul>
+
+      <h3>Insert/Append (<RT-code>a</RT-code>)</h3>
+      <ul>
+        <li><RT-code>a(v)</RT-code>: Inserts value <RT-code>v</RT-code> at the current head position. The old current cell shifts right.</li>
+        <li><RT-code>an(list)</RT-code>: Splices a list of values at the current position.</li>
+      </ul>
+
       <h2>Query primitives</h2>
 
       <p>
@@ -572,6 +611,69 @@
       <RT-code> if tms.is_active(): # Safe to treat as a First Order TM run_algorithm(tms) else: # Handle empty case pass </RT-code>
 
       <p> Because the TMS implements the TM interface, it can be passed directly to these algorithms. However, if the status is <RT-code>Empty</RT-code>, the first operation attempted by the algorithm (usually <RT-code>r()</RT-code>) will trigger a "second order" error, alerting the programmer that they neglected the guard. </p>
+
+      <h1>Machine Naming Convention</h1>
+
+      <p>
+        Concrete Tape Machine classes follow a strict naming grammar. This grammar acts as a feature descriptor, allowing the programmer to select a machine by constructing its name.
+      </p>
+
+      <p>
+        The name is composed of three feature segments: the <RT-term>Container Type</RT-term>, the <RT-term>Step Direction</RT-term>, and the <RT-term>Entanglement Approach</RT-term>.
+      </p>
+
+      <h3>grammar</h3>
+      <RT-code>
+        class_name   :: TM [ _container ] [ _direction ] [ _entanglement ]
+        container    :: ARR | ARRV | GR | GLR | SET | MAP | MAPK | MAPV 
+                      | ASCII | UTF8 | BCD
+        direction    :: SR | SL
+        entanglement :: ND | SO | EA
+      </RT-code>
+
+      <p>
+        Segments are separated by underscores. The default configuration for a segment is used if that segment is omitted.
+        The default machine is <RT-code>TM_ARR_SR_ND</RT-code> (Fixed Array, Step Right, Non-Destructive).
+      </p>
+
+      <h4>container</h4>
+      <ul>
+        <li><RT-code>ARR</RT-code> <strong>Arr</strong>ay Fixed (Default). A contiguous sequence of fixed length (e.g., Python List, C Array).</li>
+        <li><RT-code>ARRV</RT-code> <strong>Arr</strong>ay <strong>V</strong>ariable. A contiguous sequence that may resize (e.g., Vector).</li>
+        <li><RT-code>GR</RT-code> <strong>G</strong>raph <strong>R</strong>ight. A node-based sequence with a single right neighbor (Singly Linked List).</li>
+        <li><RT-code>GLR</RT-code> <strong>G</strong>raph <strong>L</strong>eft <strong>R</strong>ight. A node-based sequence with left and right neighbors (Doubly Linked List).</li>
+        <li><RT-code>SET</RT-code> <strong>Set</strong>. Iteration over the elements of a Set.</li>
+        <li><RT-code>MAP</RT-code> <strong>Map</strong>. Iteration over the items (Key-Value pairs) of a Map.</li>
+        <li><RT-code>MAPK</RT-code> <strong>Map</strong> <strong>K</strong>eys. Iteration over the keys of a Map.</li>
+        <li><RT-code>MAPV</RT-code> <strong>Map</strong> <strong>V</strong>alues. Iteration over the values of a Map.</li>
+        <li><RT-code>ASCII</RT-code> <strong>Ascii</strong>. A sequence of 1-byte characters.</li>
+        <li><RT-code>UTF8</RT-code> <strong>Utf8</strong>. A sequence of variable-width Unicode characters.</li>
+        <li><RT-code>BCD</RT-code> <strong>Bcd</strong>. A sequence of Binary Coded Decimal values.</li>
+      </ul>
+
+      <h4>direction</h4>
+      <ul>
+        <li><RT-code>SR</RT-code> <strong>S</strong>tep <strong>R</strong>ight (Default). The machine head can only be moved to the right.</li>
+        <li><RT-code>SL</RT-code> <strong>S</strong>tep <strong>L</strong>eft. The machine is bidirectional, supports stepping either right or left.</li>
+      </ul>
+
+      <h4>entanglement</h4>
+      <ul>
+        <li><RT-code>ND</RT-code> <strong>N</strong>on-<strong>D</strong>estructive (Default). Safe for entanglement.</li>
+        <li><RT-code>SO</RT-code> <strong>So</strong>litary. Exclusive ownership; supports destructive ops.</li>
+        <li><RT-code>EA</RT-code> <strong>E</strong>ntanglement <strong>A</strong>ccounting. Shared access guarded by a catalog.</li>
+      </ul>
+
+      <h3>Abstract and Traversal Machines</h3>
+      <p>
+        The naming convention extends to Abstract and Traversal machines using specific prefixes.
+      </p>
+      <ul>
+        <li><RT-code>TMA</RT-code> <strong>TM</strong> <strong>A</strong>bstract. Virtual tapes computed over state.
+          <br><em>Example:</em> <RT-code>TMA_Natural_Number</RT-code> (Iterates 0, 1, 2...).</li>
+        <li><RT-code>TMT</RT-code> <strong>TM</strong> <strong>T</strong>raversal. Algorithmic traversals over non-linear structures.
+          <br><em>Example:</em> <RT-code>TMT_Tree_DepthFirst</RT-code> (Linearizes a tree via stack/recursion).</li>
+      </ul>
 
 
     </RT-article>

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys
-from Symbol import Symbol
 
 try:
   import TM_module
@@ -9,71 +8,49 @@ except ImportError:
   sys.exit(1)
 
 # ==========================================
-# 1. The TM Stub (Callable Proxy)
+# TM Command Language (Explicit Types)
 # ==========================================
 
-class TM_Factory_Stub:
-  """
-  A Proxy object that acts as both:
-  1. The Namespace Root (holding .feature)
-  2. The Callable Factory (delegating to an implementation)
-  """
-  def __init__(self):
-    self._impl = None
-    
-  def __call__(self, *args, **kwargs):
-    if self._impl is None:
-      raise TypeError("TM factory logic not yet bound.")
-    return self._impl(*args, **kwargs)
-
-# Create the persistent TM object immediately
-TM = TM_Factory_Stub()
+# Import all C-defined types into this namespace
+_this_module = sys.modules[__name__]
+for name in dir(TM_module):
+    if name.startswith("TM_") or name.startswith("TMA_"):
+        setattr(_this_module, name, getattr(TM_module, name))
 
 # ==========================================
-# 2. Define Features (Directly on TM)
+# Defaults (Aliasing)
 # ==========================================
 
-# Create the namespace root
-TM.feature = Symbol()
+# Pattern: TM_[Container]_[Direction]_[Entanglement]
+# Default Container: Arr
+# Default Entanglement: ND
+# Default Direction: SR
 
-# Allocating features directly onto the persistent object.
-# Now we don't need temporary variables like _SR or _L.
-TM.feature.SR = TM.feature.alloc() # Step Right
-TM.feature.ND = TM.feature.alloc() # Non-Destructive
-TM.feature.L  = TM.feature.alloc() # Mirror View
+# --- Global Default ---
+TM = TM_module.TM_Arr_SR_ND
 
-# ==========================================
-# 3. The Implementation Logic
-# ==========================================
+# --- Container Defaults (Dir=SR, Ent=ND) ---
+TM_Arr  = TM_module.TM_Arr_SR_ND
+TM_ArrV = TM_module.TM_ArrV_SR_ND
+TM_Gr   = TM_module.TM_Gr_SR_ND
+TM_Glr  = TM_module.TM_Glr_SR_ND
+TM_Set  = TM_module.TM_Set_SR_ND
+TM_Map  = TM_module.TM_Map_SR_ND
+TM_MapK = TM_module.TM_MapK_SR_ND
+TM_MapV = TM_module.TM_MapV_SR_ND
+TM_ASCII= TM_module.TM_ASCII_SR_ND
+TM_UTF8 = TM_module.TM_UTF8_SR_ND
+TM_BCD  = TM_module.TM_BCD_SR_ND
 
-def _tm_implementation(data_obj ,feature_seq=None):
-  """
-  The actual factory logic.
-  Now allows us to refer to 'TM.feature' directly inside the function.
-  """
-  # Optimization: Default Case
-  if not feature_seq: return TM_module.TM_Array_SR_ND(data_obj)
+# --- Direction Defaults (Cont=Arr, Ent=ND) ---
+TM_SR = TM_module.TM_Arr_SR_ND
+TM_SL = TM_module.TM_Arr_SL_ND
 
-  # Normalize
-  fs = set(feature_seq)
+# --- Entanglement Defaults (Cont=Arr, Dir=SR) ---
+TM_ND = TM_module.TM_Arr_SR_ND
+TM_SO = TM_module.TM_Arr_SR_SO
+TM_EA = TM_module.TM_Arr_SR_EA
 
-  # Remove Defaults (Referring to the authoritative symbols directly)
-  fs.discard(TM.feature.SR)
-  fs.discard(TM.feature.ND)
-
-  # Check Empty
-  if not fs: return TM_module.TM_Array_SR_ND(data_obj)
-
-  # Check Mirror View
-  if TM.feature.L in fs:
-    fs.remove(TM.feature.L)
-    if not fs: return TM_module.TM_Array_ND(data_obj)
-
-  # Unknowns
-  raise ValueError(f"Unrecognized features: {fs}")
-
-# ==========================================
-# 4. Bind the Logic
-# ==========================================
-
-TM._impl = _tm_implementation
+# --- Common Partials ---
+TM_Arr_SL = TM_module.TM_Arr_SL_ND
+TM_ASCII_SL = TM_module.TM_ASCII_SL_ND
