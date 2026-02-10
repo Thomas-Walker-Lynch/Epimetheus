@@ -3,18 +3,16 @@
   CPython Extension: Tape Machine Factory
   
   Implements:
-    - 66 Concrete Machine Types (TM·[Container]·[Dir]·[Ent])
+    - 66 Concrete Machine Types
     - TMA_NaturalNumber (Abstract Machine)
 
   Namespaces:
+    - TM·Head : The Universal Head State struct.
     - TM·Arr· : Implementation logic for Array/List backed machines.
     - TM·Nat· : Implementation logic for the Abstract Natural Number machine.
 */
 
 /* 1. COMPILER COMPATIBILITY */
-/* If your compiler does not support UTF-8 identifiers, 
-  uncomment the line below to map dot to underscore.
-*/
 // #define · _ 
 
 #define PY_SSIZE_T_CLEAN
@@ -22,27 +20,48 @@
 #include "structmember.h"
 
 /* ========================================================= */
-/* SHARED IMPLEMENTATION: ARRAY / LIST BACKED                */
+/* UNIVERSAL HEAD STATE                                      */
 /* ========================================================= */
 
-/* TM·Arr (Instance Data)
-  Previously 'FastTM'. Represents the state for all array-backed types.
+/* LIMITATION OF C VOID POINTERS:
+   
+   In Standard ISO C, there is no way to "bind" a type to a void* pointer 
+   temporarily to perform arithmetic. A cast expression like '(Type*)ptr' 
+   yields a value (r-value), not a storage location (l-value), so we 
+   cannot perform operations like '((Type*)ptr)++'.
+   
+   To remain strictly ISO C compliant, we would have to define multiple 
+   structs (one for PyObject**, one for char*, etc.), which breaks our 
+   generic "Universal Head" architecture.
+   
+   DECISION: THE GCC/CLANG WAY
+   We utilize the common GCC/Clang extension that treats arithmetic on 
+   void* as byte-level arithmetic (i.e., sizeof(void) == 1).
+   
+   This allows us to write clean, polymorphic code:
+     self->head_ptr += sizeof(Element);
 */
+
 typedef struct {
   PyObject_HEAD
-  PyObject* tape_obj;      /* The Container (List) */
-  PyObject** head_ptr;     /* Pointer to Current Item */
-  PyObject** start_ptr;    /* Pointer to Start */
-  PyObject** end_ptr;      /* Pointer to End (Sentinel) */
-  Py_ssize_t head_idx;     /* Index Cache (Required for Resizing containers) */
-} TM·Arr;
+  PyObject* tape_obj;      /* The Container */
+  void* head_ptr;          /* Generic Pointer to Current Item */
+  void* start_ptr;         /* Generic Pointer to Start */
+  void* end_ptr;           /* Generic Pointer to End/Sentinel */
+} TM·Head;
 
-static void TM·Arr·dealloc(TM·Arr* self){
+static void TM·Head·dealloc(TM·Head* self){
   Py_XDECREF(self->tape_obj);
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
-static int TM·Arr·init(TM·Arr* self, PyObject* args, PyObject* kwds){
+/* ========================================================= */
+/* IMPLEMENTATION: ARRAY BACKED (TM·Arr·)                    */
+/* ========================================================= */
+
+/* --- Helpers --- */
+
+static int TM·Arr·init(TM·Head* self, PyObject* args, PyObject* kwds){
   PyObject* input_obj = NULL;
   if( !PyArg_ParseTuple(args, "O", &input_obj) ) return -1;
   
@@ -62,123 +81,161 @@ static int TM·Arr·init(TM·Arr* self, PyObject* args, PyObject* kwds){
   Py_ssize_t len = PyList_GET_SIZE(self->tape_obj);
   PyObject** items = ((PyListObject*)self->tape_obj)->ob_item;
   
-  self->start_ptr = items;
-  self->end_ptr = items + len;
-  self->head_ptr = items;
-  self->head_idx = 0;
+  self->start_ptr = (void*)items;
+  self->end_ptr   = (void*)(items + len);
+  self->head_ptr  = (void*)items;
   
   return 0;
 }
 
-/* --- Helper: Sync Pointers after Resize --- */
-static void TM·Arr·sync(TM·Arr* self){
+/* Sync: Re-bases pointers after a List Reallocation */
+static void TM·Arr·sync(TM·Head* self){
+  /* 1. Calculate Logical Offset (Byte Distance) */
+  Py_ssize_t byte_offset = self->head_ptr - self->start_ptr;
+
+  /* 2. Get NEW pointers */
   Py_ssize_t len = PyList_GET_SIZE(self->tape_obj);
-  PyObject** items = ((PyListObject*)self->tape_obj)->ob_item;
-  self->start_ptr = items;
-  self->end_ptr = items + len;
-  self->head_ptr = items + self->head_idx;
+  PyObject** new_items = ((PyListObject*)self->tape_obj)->ob_item;
+  
+  /* 3. Rebase */
+  self->start_ptr = (void*)new_items;
+  self->end_ptr   = (void*)(new_items + len);
+  
+  /* 4. Restore Head (Byte Arithmetic) */
+  self->head_ptr  = self->start_ptr + byte_offset;
 }
 
-/* ========================================================= */
-/* NAMESPACE: TM·Arr (Methods)                               */
-/* ========================================================= */
+/* --- PRIMITIVES: NAVIGATION (The GCC Way) --- */
 
-/* --- PRIMITIVES: NAVIGATION --- */
-static PyObject* TM·Arr·s(TM·Arr* self){ 
-  self->head_ptr++; self->head_idx++; Py_RETURN_NONE; 
-}
-static PyObject* TM·Arr·ls(TM·Arr* self){ 
-  self->head_ptr--; self->head_idx--; Py_RETURN_NONE; 
-}
-static PyObject* TM·Arr·sn(TM·Arr* self, PyObject* args){
-  Py_ssize_t n; if(!PyArg_ParseTuple(args, "n", &n)) return NULL;
-  self->head_ptr += n; self->head_idx += n; Py_RETURN_NONE;
-}
-static PyObject* TM·Arr·lsn(TM·Arr* self, PyObject* args){
-  Py_ssize_t n; if(!PyArg_ParseTuple(args, "n", &n)) return NULL;
-  self->head_ptr -= n; self->head_idx -= n; Py_RETURN_NONE;
-}
-static PyObject* TM·Arr·sR(TM·Arr* self){ 
-  self->head_idx = (self->end_ptr - self->start_ptr) - 1;
-  self->head_ptr = self->end_ptr - 1; 
+static PyObject* TM·Arr·s(TM·Head* self){ 
+  self->head_ptr += sizeof(PyObject*);
   Py_RETURN_NONE; 
 }
-static PyObject* TM·Arr·LsR(TM·Arr* self){ 
-  self->head_ptr = self->start_ptr; self->head_idx = 0; Py_RETURN_NONE; 
+
+static PyObject* TM·Arr·ls(TM·Head* self){ 
+  self->head_ptr -= sizeof(PyObject*);
+  Py_RETURN_NONE; 
+}
+
+static PyObject* TM·Arr·sn(TM·Head* self, PyObject* args){
+  Py_ssize_t n; if(!PyArg_ParseTuple(args, "n", &n)) return NULL;
+  self->head_ptr += n * sizeof(PyObject*);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·lsn(TM·Head* self, PyObject* args){
+  Py_ssize_t n; if(!PyArg_ParseTuple(args, "n", &n)) return NULL;
+  self->head_ptr -= n * sizeof(PyObject*);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·sR(TM·Head* self){ 
+  self->head_ptr = self->end_ptr - sizeof(PyObject*);
+  Py_RETURN_NONE; 
+}
+
+static PyObject* TM·Arr·LsR(TM·Head* self){ 
+  self->head_ptr = self->start_ptr; 
+  Py_RETURN_NONE; 
 }
 
 /* --- PRIMITIVES: I/O --- */
-static PyObject* TM·Arr·r(TM·Arr* self){ 
-  PyObject* item = *(self->head_ptr); Py_INCREF(item); return item; 
+
+static PyObject* TM·Arr·r(TM·Head* self){ 
+  /* Must cast to dereference the data */
+  PyObject* item = *(PyObject**)self->head_ptr; 
+  Py_INCREF(item); 
+  return item; 
 }
-static PyObject* TM·Arr·w(TM·Arr* self, PyObject* val){
-  PyObject* old = *(self->head_ptr); Py_INCREF(val); *(self->head_ptr) = val; Py_DECREF(old); Py_RETURN_NONE;
+
+static PyObject* TM·Arr·w(TM·Head* self, PyObject* val){
+  PyObject** p = (PyObject**)self->head_ptr;
+  PyObject* old = *p; 
+  Py_INCREF(val); 
+  *p = val; 
+  Py_DECREF(old); 
+  Py_RETURN_NONE;
 }
 
 /* --- PRIMITIVES: QUERY --- */
-static PyObject* TM·Arr·qR(TM·Arr* self){ return (self->head_ptr >= self->end_ptr - 1) ? Py_True : Py_False; }
-static PyObject* TM·Arr·qL(TM·Arr* self){ return (self->head_ptr <= self->start_ptr) ? Py_True : Py_False; }
+
+static PyObject* TM·Arr·qR(TM·Head* self){ 
+  /* GCC Extension: void* comparison and arithmetic */
+  return (self->head_ptr >= self->end_ptr - sizeof(PyObject*)) ? Py_True : Py_False; 
+}
+
+static PyObject* TM·Arr·qL(TM·Head* self){ 
+  return (self->head_ptr <= self->start_ptr) ? Py_True : Py_False; 
+}
 
 
 /* --- PRIMITIVES: DESTRUCTIVE (Variable Array Only) --- */
 
-/* d(): Delete current cell */
-static PyObject* TM·Arr·d(TM·Arr* self){
-  if (PyList_SetSlice(self->tape_obj, self->head_idx, self->head_idx+1, NULL) < 0) return NULL;
+static PyObject* TM·Arr·d(TM·Head* self){
+  /* 1. Calc Index (Byte Diff / Element Size) */
+  Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
+
+  /* 2. API Call */
+  if (PyList_SetSlice(self->tape_obj, idx, idx+1, NULL) < 0) return NULL;
   
+  /* 3. SYNC */
   TM·Arr·sync(self);
   
-  /* Safety: If we deleted the last element */
-  if (self->head_ptr >= self->end_ptr && self->head_idx > 0) {
-      if (self->start_ptr == self->end_ptr) {
-          PyErr_SetString(PyExc_RuntimeError, "TM Empty: First Order Invariant Broken.");
-          return NULL;
-      }
-      self->head_idx--;
-      self->head_ptr--;
+  /* 4. Safety */
+  if (self->head_ptr >= self->end_ptr && self->start_ptr != self->end_ptr) {
+      self->head_ptr -= sizeof(PyObject*);
+  } else if (self->start_ptr == self->end_ptr) {
+      PyErr_SetString(PyExc_RuntimeError, "TM Empty: First Order Invariant Broken.");
+      return NULL;
   }
   Py_RETURN_NONE;
 }
 
-/* a(v): Insert value at current head */
-static PyObject* TM·Arr·a(TM·Arr* self, PyObject* val){
-  if (PyList_Insert(self->tape_obj, self->head_idx, val) < 0) return NULL;
+static PyObject* TM·Arr·a(TM·Head* self, PyObject* val){
+  Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
+
+  if (PyList_Insert(self->tape_obj, idx, val) < 0) return NULL;
+  
   TM·Arr·sync(self);
   Py_RETURN_NONE;
 }
 
-/* esd(): Delete Right Neighbor */
-static PyObject* TM·Arr·esd(TM·Arr* self){
-  if (self->head_ptr >= self->end_ptr - 1) {
+static PyObject* TM·Arr·esd(TM·Head* self){
+  if (self->head_ptr >= self->end_ptr - sizeof(PyObject*)) {
        PyErr_SetString(PyExc_IndexError, "esd: No right neighbor.");
        return NULL;
   }
-  if (PyList_SetSlice(self->tape_obj, self->head_idx+1, self->head_idx+2, NULL) < 0) return NULL;
+  
+  Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
+  
+  if (PyList_SetSlice(self->tape_obj, idx+1, idx+2, NULL) < 0) return NULL;
+  
   TM·Arr·sync(self);
   Py_RETURN_NONE;
 }
 
-/* Lesd(): Delete Left Neighbor */
-static PyObject* TM·Arr·Lesd(TM·Arr* self){
+static PyObject* TM·Arr·Lesd(TM·Head* self){
   if (self->head_ptr <= self->start_ptr) {
        PyErr_SetString(PyExc_IndexError, "Lesd: No left neighbor.");
        return NULL;
   }
-  /* Delete at head_idx - 1 */
-  if (PyList_SetSlice(self->tape_obj, self->head_idx-1, self->head_idx, NULL) < 0) return NULL;
   
-  self->head_idx--; /* We shifted left */
+  Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
+  if (PyList_SetSlice(self->tape_obj, idx-1, idx, NULL) < 0) return NULL;
+  
+  /* Adjustment: Shift Left */
+  self->head_ptr -= sizeof(PyObject*);
+
   TM·Arr·sync(self);
   Py_RETURN_NONE;
 }
 
 
 /* ========================================================= */
-/* METHOD TABLES                                             */
+/* METHOD TABLES (Array Backed)                              */
 /* ========================================================= */
 
-/* 1. NON-DESTRUCTIVE (ND) TABLES */
-
+/* 1. NON-DESTRUCTIVE (ND) */
 static PyMethodDef Table·SR·ND[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
@@ -203,8 +260,7 @@ static PyMethodDef Table·SL·ND[] = {
   {NULL}
 };
 
-/* 2. DESTRUCTIVE (SO) TABLES - For ArrV */
-
+/* 2. DESTRUCTIVE (SO) - For ArrV */
 static PyMethodDef Table·SR·SO[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
@@ -248,55 +304,37 @@ static int TM·Nat·init(TM·Nat* self, PyObject* args, PyObject* kwds){
   return 0;
 }
 
-static PyObject* TM·Nat·s(TM·Nat* self){
-  self->state++;
-  Py_RETURN_NONE;
-}
-
+static PyObject* TM·Nat·s(TM·Nat* self){ self->state++; Py_RETURN_NONE; }
 static PyObject* TM·Nat·sn(TM·Nat* self, PyObject* args){
   unsigned long long n;
   if(!PyArg_ParseTuple(args, "K", &n)) return NULL;
-  self->state += n;
-  Py_RETURN_NONE;
+  self->state += n; Py_RETURN_NONE;
 }
 
-static PyObject* TM·Nat·ls(TM·Nat* self){
-  if(self->state > 0) self->state--;
-  Py_RETURN_NONE;
+static PyObject* TM·Nat·ls(TM·Nat* self){ 
+  /* FIXED: Indentation warning */
+  if(self->state > 0) self->state--; 
+  Py_RETURN_NONE; 
 }
 
-static PyObject* TM·Nat·LsR(TM·Nat* self){
-  self->state = 0;
-  Py_RETURN_NONE;
-}
-
-static PyObject* TM·Nat·r(TM·Nat* self){
-  return PyLong_FromUnsignedLongLong(self->state);
-}
-
+static PyObject* TM·Nat·LsR(TM·Nat* self){ self->state = 0; Py_RETURN_NONE; }
+static PyObject* TM·Nat·r(TM·Nat* self){ return PyLong_FromUnsignedLongLong(self->state); }
 static PyObject* TM·Nat·w(TM·Nat* self, PyObject* val){
   PyErr_SetString(PyExc_TypeError, "Cannot write to Abstract Natural Number tape.");
   return NULL;
 }
-
-static PyObject* TM·Nat·qR(TM·Nat* self){
-  Py_RETURN_FALSE; 
-}
-
-static PyObject* TM·Nat·qL(TM·Nat* self){
-  if(self->state == 0) Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
-}
+static PyObject* TM·Nat·qR(TM·Nat* self){ Py_RETURN_FALSE; }
+static PyObject* TM·Nat·qL(TM·Nat* self){ return (self->state == 0) ? Py_True : Py_False; }
 
 static PyMethodDef TM·Nat·methods[] = {
-  {"s",   (PyCFunction)TM·Nat·s,   METH_NOARGS, ""},
-  {"sn",  (PyCFunction)TM·Nat·sn,  METH_VARARGS, ""},
-  {"ls",  (PyCFunction)TM·Nat·ls,  METH_NOARGS, ""},
-  {"r",   (PyCFunction)TM·Nat·r,   METH_NOARGS, ""},
-  {"w",   (PyCFunction)TM·Nat·w,   METH_O, ""},
-  {"qR",  (PyCFunction)TM·Nat·qR,  METH_NOARGS, ""},
-  {"qL",  (PyCFunction)TM·Nat·qL,  METH_NOARGS, ""},
-  {"LsR", (PyCFunction)TM·Nat·LsR, METH_NOARGS, ""},
+  {"s", (PyCFunction)TM·Nat·s, METH_NOARGS, ""},
+  {"sn",(PyCFunction)TM·Nat·sn,METH_VARARGS,""},
+  {"ls",(PyCFunction)TM·Nat·ls,METH_NOARGS, ""},
+  {"r", (PyCFunction)TM·Nat·r, METH_NOARGS, ""},
+  {"w", (PyCFunction)TM·Nat·w, METH_O, ""},
+  {"qR",(PyCFunction)TM·Nat·qR,METH_NOARGS, ""},
+  {"qL",(PyCFunction)TM·Nat·qL,METH_NOARGS, ""},
+  {"LsR",(PyCFunction)TM·Nat·LsR,METH_NOARGS, ""},
   {NULL}
 };
 
@@ -320,11 +358,11 @@ static PyTypeObject TMA_NaturalNumber·Type = {
 static PyTypeObject NAME##·Type = { \
   PyVarObject_HEAD_INIT(NULL, 0) \
   .tp_name = "TM_module." #NAME, \
-  .tp_basicsize = sizeof(TM·Arr), \
+  .tp_basicsize = sizeof(TM·Head), \
   .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, \
   .tp_new = PyType_GenericNew, \
   .tp_init = (initproc)TM·Arr·init, \
-  .tp_dealloc = (destructor)TM·Arr·dealloc, \
+  .tp_dealloc = (destructor)TM·Head·dealloc, \
   .tp_methods = METHODS, \
 };
 
@@ -411,7 +449,7 @@ DEFINE_TYPE(TM_MapV_SL_SO, Table·SL·ND)
 DEFINE_TYPE(TM_MapV_SL_EA, Table·SL·ND)
 
 /* ---------------------------------------------------------
-   9. ASCII (String) - Acronym
+   9. ASCII (String)
    --------------------------------------------------------- */
 DEFINE_TYPE(TM_ASCII_SR_ND, Table·SR·ND)
 DEFINE_TYPE(TM_ASCII_SR_SO, Table·SR·ND) 
@@ -421,7 +459,7 @@ DEFINE_TYPE(TM_ASCII_SL_SO, Table·SL·ND)
 DEFINE_TYPE(TM_ASCII_SL_EA, Table·SL·ND)
 
 /* ---------------------------------------------------------
-   10. UTF8 (String) - Acronym
+   10. UTF8 (String)
    --------------------------------------------------------- */
 DEFINE_TYPE(TM_UTF8_SR_ND, Table·SR·ND)
 DEFINE_TYPE(TM_UTF8_SR_SO, Table·SR·ND)
@@ -431,7 +469,7 @@ DEFINE_TYPE(TM_UTF8_SL_SO, Table·SL·ND)
 DEFINE_TYPE(TM_UTF8_SL_EA, Table·SL·ND)
 
 /* ---------------------------------------------------------
-   11. BCD (String/Array) - Acronym
+   11. BCD (String/Array)
    --------------------------------------------------------- */
 DEFINE_TYPE(TM_BCD_SR_ND, Table·SR·ND)
 DEFINE_TYPE(TM_BCD_SR_SO, Table·SR·ND)
