@@ -1,0 +1,266 @@
+/*
+  TM_Array.c
+  Topology: Contiguous Memory (Linear)
+  Backing: PyListObject
+*/
+
+/* ALLOW CDOT IN IDENTIFIERS */
+#define · _ 
+
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+#include "structmember.h"
+
+/* --- 1. HEAD STRUCT (Linear Array) --- */
+
+typedef struct {
+  PyObject_HEAD
+  PyObject* tape_obj;       /* Variable: The Container */
+  PyObject** head_ptr;      /* Variable: Pointer to Current Cell */
+  PyObject** leftmost_ptr;  /* Variable: Pointer to Leftmost Cell */
+  PyObject** right_sentinel;/* Variable: Pointer to Right Sentinel */
+} TM·Arr·Head;
+
+static void TM·Arr·dealloc(TM·Arr·Head* self){
+  Py_XDECREF(self->tape_obj);
+  Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int TM·Arr·init(TM·Arr·Head* self, PyObject* args, PyObject* kwds){
+  PyObject* input_obj = NULL;
+  if( !PyArg_ParseTuple(args, "O", &input_obj) ) return -1;
+  
+  if( !PyList_Check(input_obj) ){
+      PyErr_SetString(PyExc_TypeError, "TM_Array requires a Python List.");
+      return -1;
+  }
+  if (PyList_Size(input_obj) == 0) {
+      PyErr_SetString(PyExc_ValueError, "TM cannot be empty.");
+      return -1;
+  }
+
+  self->tape_obj = input_obj;
+  Py_INCREF(self->tape_obj);
+  
+  Py_ssize_t len = PyList_GET_SIZE(self->tape_obj);
+  PyObject** items = ((PyListObject*)self->tape_obj)->ob_item;
+  
+  self->leftmost_ptr = items;
+  self->right_sentinel = items + len;
+  self->head_ptr  = items;
+  
+  return 0;
+}
+
+/* --- 2. HELPERS --- */
+
+static void TM·Arr·sync(TM·Arr·Head* self){
+  Py_ssize_t offset = self->head_ptr - self->leftmost_ptr;
+  Py_ssize_t len = PyList_GET_SIZE(self->tape_obj);
+  PyObject** new_items = ((PyListObject*)self->tape_obj)->ob_item;
+  
+  self->leftmost_ptr = new_items;
+  self->right_sentinel = new_items + len;
+  self->head_ptr = self->leftmost_ptr + offset;
+}
+
+static inline void TM·Arr·lazysync(TM·Arr·Head* self){
+  Py_ssize_t known_len = self->right_sentinel - self->leftmost_ptr;
+  Py_ssize_t actual_len = PyList_GET_SIZE(self->tape_obj);
+  if (known_len != actual_len) {
+      TM·Arr·sync(self);
+  }
+}
+
+/* --- 3. PRIMITIVES: NAVIGATION --- */
+
+static PyObject* TM·Arr·s(TM·Arr·Head* self){ 
+  TM·Arr·lazysync(self);
+  self->head_ptr++; 
+  Py_RETURN_NONE; 
+}
+
+static PyObject* TM·Arr·Ls(TM·Arr·Head* self){ 
+  TM·Arr·lazysync(self);
+  self->head_ptr--; 
+  Py_RETURN_NONE; 
+}
+
+static PyObject* TM·Arr·sn(TM·Arr·Head* self, PyObject* args){
+  TM·Arr·lazysync(self);
+  Py_ssize_t n; if(!PyArg_ParseTuple(args, "n", &n)) return NULL;
+  self->head_ptr += n; 
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·Lsn(TM·Arr·Head* self, PyObject* args){
+  TM·Arr·lazysync(self);
+  Py_ssize_t n; if(!PyArg_ParseTuple(args, "n", &n)) return NULL;
+  self->head_ptr -= n;
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·sR(TM·Arr·Head* self){ 
+  TM·Arr·lazysync(self);
+  self->head_ptr = self->right_sentinel - 1;
+  Py_RETURN_NONE; 
+}
+
+static PyObject* TM·Arr·LsR(TM·Arr·Head* self){ 
+  TM·Arr·lazysync(self);
+  self->head_ptr = self->leftmost_ptr; 
+  Py_RETURN_NONE; 
+}
+
+/* --- 4. PRIMITIVES: ENTANGLEMENT --- */
+
+static PyObject* TM·Arr·e(TM·Arr·Head* self){
+  TM·Arr·lazysync(self);
+  PyTypeObject* type = Py_TYPE(self);
+  TM·Arr·Head* new_tm = (TM·Arr·Head*)type->tp_alloc(type, 0);
+  if (!new_tm) return NULL;
+
+  new_tm->tape_obj = self->tape_obj;
+  Py_INCREF(new_tm->tape_obj);
+
+  new_tm->leftmost_ptr = self->leftmost_ptr;
+  new_tm->right_sentinel = self->right_sentinel;
+  new_tm->head_ptr = self->head_ptr;
+
+  return (PyObject*)new_tm;
+}
+
+/* --- 5. PRIMITIVES: I/O --- */
+
+static PyObject* TM·Arr·r(TM·Arr·Head* self){ 
+  TM·Arr·lazysync(self);
+  PyObject* item = *self->head_ptr; 
+  Py_INCREF(item); 
+  return item; 
+}
+
+static PyObject* TM·Arr·w(TM·Arr·Head* self, PyObject* val){
+  TM·Arr·lazysync(self);
+  PyObject* old = *self->head_ptr;
+  Py_INCREF(val); 
+  *self->head_ptr = val; 
+  Py_DECREF(old); 
+  Py_RETURN_NONE;
+}
+
+/* --- 6. PRIMITIVES: QUERY --- */
+
+static PyObject* TM·Arr·qR(TM·Arr·Head* self){ 
+  TM·Arr·lazysync(self);
+  if(self->head_ptr >= self->right_sentinel - 1) Py_RETURN_TRUE;
+  Py_RETURN_FALSE;
+}
+
+static PyObject* TM·Arr·LqR(TM·Arr·Head* self){ 
+  TM·Arr·lazysync(self);
+  if(self->head_ptr <= self->leftmost_ptr) Py_RETURN_TRUE;
+  Py_RETURN_FALSE; 
+}
+
+static PyObject* TM·Arr·qnR(TM·Arr·Head* self){
+  TM·Arr·lazysync(self);
+  Py_ssize_t count = (self->right_sentinel - self->head_ptr) - 1;
+  return PyLong_FromSsize_t(count);
+}
+
+static PyObject* TM·Arr·LqnR(TM·Arr·Head* self){
+  TM·Arr·lazysync(self);
+  Py_ssize_t count = self->head_ptr - self->leftmost_ptr;
+  return PyLong_FromSsize_t(count);
+}
+
+/* --- 7. DESTRUCTIVE (SO Only) --- */
+
+static PyObject* TM·Arr·dR(TM·Arr·Head* self){
+  TM·Arr·lazysync(self);
+  /* Guard: Must have a left neighbor to step back to. */
+  if (self->head_ptr <= self->leftmost_ptr) {
+      PyErr_SetString(PyExc_RuntimeError, "Invariant Violation: Cannot dR from leftmost cell.");
+      return NULL;
+  }
+  Py_ssize_t idx = self->head_ptr - self->leftmost_ptr;
+  Py_ssize_t len = PyList_GET_SIZE(self->tape_obj);
+  
+  if (PyList_SetSlice(self->tape_obj, idx, len, NULL) < 0) return NULL;
+  
+  self->head_ptr--;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·LdR(TM·Arr·Head* self){
+  TM·Arr·lazysync(self);
+  /* Guard: Must have a right neighbor to reset to. */
+  if (self->head_ptr >= self->right_sentinel - 1) {
+      PyErr_SetString(PyExc_RuntimeError, "Invariant Violation: Cannot LdR from rightmost cell.");
+      return NULL;
+  }
+  Py_ssize_t idx = self->head_ptr - self->leftmost_ptr;
+  
+  if (PyList_SetSlice(self->tape_obj, 0, idx+1, NULL) < 0) return NULL;
+  
+  self->head_ptr = self->leftmost_ptr; 
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·esd(TM·Arr·Head* self){
+  TM·Arr·lazysync(self);
+  if (self->head_ptr >= self->right_sentinel - 1) {
+       PyErr_SetString(PyExc_IndexError, "esd: No right neighbor.");
+       return NULL;
+  }
+  Py_ssize_t idx = self->head_ptr - self->leftmost_ptr;
+  if (PyList_SetSlice(self->tape_obj, idx+1, idx+2, NULL) < 0) return NULL;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·eLsd(TM·Arr·Head* self){
+  TM·Arr·lazysync(self);
+  if (self->head_ptr <= self->leftmost_ptr) {
+       PyErr_SetString(PyExc_IndexError, "eLsd: No left neighbor.");
+       return NULL;
+  }
+  Py_ssize_t idx = self->head_ptr - self->leftmost_ptr;
+  if (PyList_SetSlice(self->tape_obj, idx-1, idx, NULL) < 0) return NULL;
+  
+  self->head_ptr--;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·esa(TM·Arr·Head* self, PyObject* val){
+  TM·Arr·lazysync(self);
+  Py_ssize_t idx = self->head_ptr - self->leftmost_ptr;
+  if (PyList_Insert(self->tape_obj, idx+1, val) < 0) return NULL;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·eLsa(TM·Arr·Head* self, PyObject* val){
+  TM·Arr·lazysync(self);
+  Py_ssize_t idx = self->head_ptr - self->leftmost_ptr;
+  if (PyList_Insert(self->tape_obj, idx, val) < 0) return NULL;
+  self->head_ptr++;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·aR(TM·Arr·Head* self, PyObject* val){
+  if (PyList_Append(self->tape_obj, val) < 0) return NULL;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·LaR(TM·Arr·Head* self, PyObject* val){
+  if (PyList_Insert(self->tape_obj, 0, val) < 0) return NULL;
+  self->head_ptr++;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
