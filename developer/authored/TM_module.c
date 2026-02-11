@@ -42,7 +42,7 @@
      self->head_ptr += sizeof(Element);
 */
 
-typedef struct {
+typedef struct{
   PyObject_HEAD
   PyObject* tape_obj;      /* The Container */
   void* head_ptr;          /* Generic Pointer to Current Item */
@@ -139,6 +139,26 @@ static PyObject* TM·Arr·LsR(TM·Head* self){
   Py_RETURN_NONE; 
 }
 
+/* --- PRIMITIVES: ENTANGLEMENT --- */
+
+static PyObject* TM·Arr·e(TM·Head* self){
+  /* Create a new object of the same type */
+  PyTypeObject* type = Py_TYPE(self);
+  TM·Head* new_tm = (TM·Head*)type->tp_alloc(type, 0);
+  if (!new_tm) return NULL;
+
+  /* Share the tape */
+  new_tm->tape_obj = self->tape_obj;
+  Py_INCREF(new_tm->tape_obj);
+
+  /* Copy the pointers (Entangled start at same position) */
+  new_tm->start_ptr = self->start_ptr;
+  new_tm->end_ptr   = self->end_ptr;
+  new_tm->head_ptr  = self->head_ptr;
+
+  return (PyObject*)new_tm;
+}
+
 /* --- PRIMITIVES: I/O --- */
 
 static PyObject* TM·Arr·r(TM·Head* self){ 
@@ -161,11 +181,17 @@ static PyObject* TM·Arr·w(TM·Head* self, PyObject* val){
 
 static PyObject* TM·Arr·qR(TM·Head* self){ 
   /* GCC Extension: void* comparison and arithmetic */
-  return (self->head_ptr >= self->end_ptr - sizeof(PyObject*)) ? Py_True : Py_False; 
+  if(self->head_ptr >= self->end_ptr - sizeof(PyObject*)){
+    Py_RETURN_TRUE;
+  }
+  Py_RETURN_FALSE;
 }
 
 static PyObject* TM·Arr·qL(TM·Head* self){ 
-  return (self->head_ptr <= self->start_ptr) ? Py_True : Py_False; 
+  if(self->head_ptr <= self->start_ptr){
+    Py_RETURN_TRUE;
+  }
+  Py_RETURN_FALSE; 
 }
 
 
@@ -239,6 +265,7 @@ static PyObject* TM·Arr·Lesd(TM·Head* self){
 static PyMethodDef Table·SR·ND[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
+  {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
   {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
   {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
   {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
@@ -249,6 +276,7 @@ static PyMethodDef Table·SR·ND[] = {
 static PyMethodDef Table·SL·ND[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
+  {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
   {"ls",(PyCFunction)TM·Arr·ls,METH_NOARGS, ""},
   {"lsn",(PyCFunction)TM·Arr·lsn,METH_VARARGS,""},
   {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
@@ -264,6 +292,7 @@ static PyMethodDef Table·SL·ND[] = {
 static PyMethodDef Table·SR·SO[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
+  {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
   {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
   {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
   {"d", (PyCFunction)TM·Arr·d, METH_NOARGS, ""}, 
@@ -277,6 +306,7 @@ static PyMethodDef Table·SR·SO[] = {
 static PyMethodDef Table·SL·SO[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"ls",(PyCFunction)TM·Arr·ls,METH_NOARGS, ""},
+  {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
   {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
   {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
   {"d", (PyCFunction)TM·Arr·d, METH_NOARGS, ""},
@@ -312,7 +342,6 @@ static PyObject* TM·Nat·sn(TM·Nat* self, PyObject* args){
 }
 
 static PyObject* TM·Nat·ls(TM·Nat* self){ 
-  /* FIXED: Indentation warning */
   if(self->state > 0) self->state--; 
   Py_RETURN_NONE; 
 }
@@ -323,8 +352,14 @@ static PyObject* TM·Nat·w(TM·Nat* self, PyObject* val){
   PyErr_SetString(PyExc_TypeError, "Cannot write to Abstract Natural Number tape.");
   return NULL;
 }
+
 static PyObject* TM·Nat·qR(TM·Nat* self){ Py_RETURN_FALSE; }
-static PyObject* TM·Nat·qL(TM·Nat* self){ return (self->state == 0) ? Py_True : Py_False; }
+static PyObject* TM·Nat·qL(TM·Nat* self){ 
+    if(self->state == 0){
+      Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE; 
+}
 
 static PyMethodDef TM·Nat·methods[] = {
   {"s", (PyCFunction)TM·Nat·s, METH_NOARGS, ""},

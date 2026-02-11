@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Tape Machine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+    
+    <script src="style/body_visibility_hidden.js"></script>
+    <script>
+      window.StyleRT.body_visibility_hidden();
+    </script>
+  </head>
+  <body>
+    <RT-article>
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-02-04" 
+        title="Tape Machine">
+      </RT-title>
+
+      <RT-TOC level="1"></RT-TOC>
+
+      <h1>Introduction</h1>
+
+      <p>
+        A <RT-term>Tape Machine</RT-term> (TM) is an abstract mechanism for manipulating data found in sequences.  Such sequences include lists, arrays, sets (given an ordering function), and maps (also given an ordering function).  Also included are linear traversals of more complex structures.  The theory underpinning the TM is discussed in the <RT-term>TTCA</RT-term> book.
+      </p>
+
+      <p>
+        Unlike standard arrays (which are stateless) or iterators (which are transient), a TM combines a data substrate with a persistent <RT-term>head</RT-term>.  The head maintains positional state, allowing the programmer to navigate, read, and write tape cells.
+      </p>
+
+      <p>
+        Thus a TM packages both data, and all pointers into that data, within one structure.
+      </p>
+
+      <p>
+        A TM can have a concrete tape or a <RT-term>virtual tape</RT-term>.  A concrete tape is backed by a container.  A virtual tape presents the same TM interface, but its cells and motion are implemented by functions over some internal state.  For example, an abstract <RT-term>Counting Number</RT-term> tape machine can use a big integer as its state and implement stepping and reading over that state, instead of traversing an array of numbers.
+      </p>
+
+      <p>
+        A defining invariant of all Tape Machines is that cell contents are cargo.  The TM reads and writes cell payload, but it does not interpret that payload as control.  The decisions are made above the TM, by the programmer’s algorithm.
+      </p>
+
+      <p>
+        A TM is constructed with a set of feature symbols that select which parts of the interface are available.  When no feature symbols are supplied, the result is a non-destructive step right machine with no indexing.  Feature symbols can enable step left behavior (via the mirror view), enable random access indexing functions, and accounting for a shared tape, among other things.
+      </p>
+
+      <p>
+        A <RT-term>first order</RT-term> TM is defined by a single invariant: the head is always on a valid cell.  This invariant makes the primitive interface total: every move, read, write, and query has a clean, well defined meaning, and caller code stays free of scattered end case tests.
+      </p>
+
+      <p>
+        If an operation were permitted to remove the last remaining cell of a tape, said first order invariant would be broken and the interface would stop being total.  A working TM that supported such a deletion would need status logic that represents the empty state.  That status logic would either be embedded inside the TM operations as edge handling, or be represented explicitly as a separate status machine layered above the base TM.  Either choice represents a shift in level of analysis being done, and therefore would lead to the construction of a distinct <RT-term>second order</RT-term> tape machine.
+      </p>
+
+      <p>
+        Tape machines that share a tape are said to be <RT-neologism>entangled</RT-neologism>. There will be both data and structure hazards among entangled machines. Data hazards have to do with the misuse of locks or other mistakes in cooperation between machines that cause a machine to read the wrong data. Data hazards can lead to incorrectly computed results, but they will not break the machines. In contrast, structure hazards lead to broken machines. The principle structure hazard is that of one entangled TM deleting a cell that another TM has its head on. That orphans the head of that other machine and leads to a violation of the <em>a tape machine head is always on a valid cell</em> invariant. 
+      </p>
+
+      <p>
+        We leave the data hazard management to the programmer; however, we provide specific features for avoiding  structure hazards.
+        These are selected at TM construction time. In one approach, no methods are placed on the interface that can destroy tape cells. This supports a non-destructive programming paradigm, so such machines are said to be <RT-term>non-destructive</RT-term>. Without destructive operations, entangled machines simply do not have the ability to break each other.  In a second approach, the interface is configured so there are no functions for entangling machines in the first place. Each <RT-neologism>solitary machine</RT-neologism> can safely perform destructive operations because no other machine shares its tape.  As a third approach, each group of entangled machines shares a catalog listing all machines in the group. Caller code can guard operations by querying whether a planned operation is safe before attempting it. This third strategy is called <RT-neologism>entanglement accounting</RT-neologism>. During the time of execution of the guard and operation, each tape machine must be able to lockout others from access to the catalog.  Yet another approach is for the programmer, compiler, or external function to prove code is safe, which is the same as proving that guard code is not needed. An alternative is to use a compiler that only produces correct code in the first place.  This is the approach of <RT-term>correct by construction</RT-term>.
+      </p>
+
+      <h1>Command language</h1>
+
+      <p>
+        The command language is not used directly, rather it describes the letter patterns used to form TM interface function names.
+        Such an approach can be found in LISP language list access function names, and its extension is described in the paper "Towards a Better Understanding of CAR, CDR, CADR and the Others".
+      </p>
+
+      <p>
+        The actual function names found on TM interfaces are listed in later sections of this guide. The ultimate authority is the source code itself. Later we can add a compiler for creating new functions based on this language. Such a compiler would be a function that adds functions to a TM interface.
+      </p>
+
+      <p>
+        A TM is constructed with a set of feature symbols that select which parts of the language are available.
+        When no feature symbols are supplied, the result is a non-destructive step right machine with no indexing.
+        Feature symbols can enable step left behavior (via the mirror view) and can independently enable indexing commands.
+      </p>
+
+
+      <h2>For the non-destructive step right machine</h2>
+
+      <h3>grammar</h3>
+      <RT-code>
+        statement  :: ( command [arg]* )+
+        command    :: e | q | r | s | w
+        arg        :: R | n
+      </RT-code>
+
+      <h4>statement</h4>
+      <p>
+        A statement is parsed left to right. Each command letter begins a new command group.  All following <RT-code>arg</RT-code> descriptors attach to that command until the next command letter appears.  There are no spaces. Arguments are given to the resulting function in the order that the command and its descriptors require them.
+      </p>
+
+      <p>
+        Accordingly, a function name such as <RT-code>snr(i)</RT-code> denotes two command groups:
+        <RT-code>sn(i)</RT-code> steps right <RT-code>i</RT-code> times, then <RT-code>r</RT-code> copies out the current cell.
+      </p>
+
+      <h4>command</h4>
+      <ul>
+        <li><RT-code>e</RT-code> <strong>e</strong>ntangle</li>
+        <li><RT-code>q</RT-code> <strong>q</strong>uery</li>
+        <li><RT-code>r</RT-code> <strong>r</strong>ead</li>
+        <li><RT-code>s</RT-code> <strong>s</strong>tep</li>
+        <li><RT-code>w</RT-code> <strong>w</strong>rite</li>
+      </ul>
+
+      <p>
+        Two or more machines are entangled when they share one tape.
+        Entangle differs from clone because the tape is shared rather than copied.
+        What is duplicated is the head state, so entangled heads move independently.
+        A machine produced by <RT-code>e</RT-code> begins with its head on the same cell as the machine it was created from.
+      </p>
+
+      <p>
+        The query command, <RT-code>q</RT-code>, reports head state.
+        With no <RT-code>arg</RT-code> descriptor it returns a boolean value.
+        With an <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor it returns true iff the head is on the rightmost cell. With an <RT-code>I</RT-code> <RT-code>arg</RT-code> descriptor it returns an index.
+      </p>
+
+      <p>
+        TM uses a guard approach for end cases. Query commands appear in control flow so caller code can select the guards it needs and handle end cases explicitly.
+        When guards are unnecessary, caller code can omit them.
+      </p>
+
+      <p>
+        The <RT-code>r</RT-code> and <RT-code>w</RT-code> commands copy values to and from the current cell.
+        As of the time of this writing they are cell local operations, so direction does not enter.
+      </p>
+
+      <p>
+        The <RT-code>s</RT-code> step command moves the head to the right neighbor cell.
+        When <RT-code>s</RT-code> is given an <RT-code>n</RT-code> <RT-code>arg</RT-code> descriptor, it performs <RT-code>n</RT-code> right steps.
+        On a step right only machine, <RT-code>n</RT-code> must be positive.
+      </p>
+
+      <h4>arg</h4>
+      <ul>
+        <li><RT-code>n</RT-code> <strong>n</strong></li>
+        <li><RT-code>R</RT-code> <strong>R</strong>ightmost</li>
+      </ul>
+
+      <p>
+        The <RT-code>n</RT-code> <RT-code>arg</RT-code> descriptor supplies a repetition count.
+      </p>
+
+      <p>
+        The <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor focuses the command on the rightmost cell.
+        For <RT-code>qR</RT-code>, the result is true iff the head is on rightmost.
+        For <RT-code>sR</RT-code>, the effect is to cue the head to rightmost.
+      </p>
+
+      <h3>Examples</h3>
+
+      <h4>Relative head movement</h4>
+      <RT-code>
+        s         ; step to right neighbor
+        sn(1)     ; step to right neighbor
+        sn(2)     ; step to right neighbor twice
+      </RT-code>
+
+      <h4>Absolute head movement</h4>
+      <RT-code>
+        sR        ; cue the head to rightmost
+      </RT-code>
+
+      <h4>Query</h4>
+      <RT-code>
+        qR        ; true iff head is on rightmost
+      </RT-code>
+
+      <h4>Copying to and from tape cells and python variables</h4>
+      <RT-code>
+        r          ; copies cell contents to the LHS of an assignment
+        w(v)       ; copies v into the cell
+      </RT-code>
+
+
+      <h2>For the non-destructive machine that has step left</h2>
+
+      <p>
+        The step right grammar extends to left going behavior by introducing a mirror view of a machine.
+        In the mirror view, every rightward operation corresponds to the base machine’s leftward operation, so new command letters are unnecessary.
+        What is rightmost in the base view becomes leftmost in the mirror view, and vice versa.
+      </p>
+
+      <p>
+        In this extended grammar, the <RT-code>L</RT-code> prefix selects the mirror view for the command group that follows it.
+        <RT-code>L</RT-code> affects direction sensitive operations such as stepping, moving to rightmost, and scans.
+        Today <RT-code>r</RT-code> and <RT-code>w</RT-code> are cell local, so <RT-code>L</RT-code> does not change their behavior.
+      </p>
+
+      <p>
+        Step left support does not imply index space.
+        A machine can support <RT-code>L</RT-code> while still omitting index operations.
+        When index space is enabled as an additional feature, the <RT-code>I</RT-code> <RT-code>arg</RT-code> descriptor becomes available and index based cue and query forms become legal.
+        When <RT-code>L</RT-code> is available, <RT-code>n</RT-code> can also be negative, with the sign selecting the direction in the base view.
+      </p>
+
+      <h3>grammar</h3>
+      <RT-code>
+        statement  :: ( [machine] command [arg]* )+
+        machine    :: L
+        command    :: e | q | r | s | w
+        arg        :: R | I | n
+      </RT-code>
+
+      <p>
+        Index space, as defined in the TTCA book, is a natural number sequence machine that walks the tape of a base machine and establishes a one to one correspondence between natural numbers and tape cells.
+        That correspondence belongs to the tape and stays fixed when we change the view.
+        For example, consider a tape with cells <RT-code>[c_0 ,c_1 ,c_2 ,c_3 ,c_4]</RT-code>, where <RT-code>c_4</RT-code> is rightmost and has index 4.
+        In the mirror view we write the same cells as <RT-code>[c_4 ,c_3 ,c_2 ,c_1 ,c_0]</RT-code>.
+        In the mirror view <RT-code>c_4</RT-code> sits at the left edge, and it still has index 4.
+        A right step from <RT-code>c_4</RT-code> in the mirror view lands on <RT-code>c_3</RT-code>, which matches a left step from <RT-code>c_4</RT-code> in the base view.
+      </p>
+
+      <h3>Examples</h3>
+
+      <p>
+        In these examples, the comments discuss what happens on the base machine. Effects in the mirror view match the same command without the <RT-code>L</RT-code> prefix.
+      </p>
+
+      <h4>Relative head movement</h4>
+      <RT-code>
+        Ls        ; step to left neighbor
+        Lsn(2)    ; step to left neighbor twice
+        sn(-2)    ; step to left neighbor twice
+        sn(2)     ; step to right neighbor twice
+      </RT-code>
+
+      <h4>Head movement relative to leftmost</h4>
+      <RT-code>
+        sI(0)     ; cue the head to the leftmost cell by index
+        sI(3)     ; cue the head to tape[3]
+      </RT-code>
+
+      <p>
+        <RT-code>LsI(k)</RT-code> and <RT-code>sI(k)</RT-code> cue the head to the same indexed cell.
+        <RT-code>L</RT-code> flips direction and the meaning of <RT-code>R</RT-code>, not the index to cell correspondence.
+        Thus <RT-code>LsI(0)</RT-code> cues the cell with index zero, which is rightmost in the mirror view and leftmost in the base view.
+      </p>
+
+      <h4>Absolute head movement</h4>
+      <RT-code>
+        LsR       ; cue the head to leftmost
+        sR        ; cue the head to rightmost
+      </RT-code>
+
+      <p>
+        Without code optimization <RT-code>LsR</RT-code> will be faster than <RT-code>sI(0)</RT-code>, because <RT-code>sI</RT-code> requires passing and processing an argument.
+      </p>
+
+      <h4>Query</h4>
+      <RT-code>
+        LqR       ; head is on leftmost
+        qR        ; head is on rightmost
+        qI        ; index of the head
+        qIR       ; index of rightmost
+        LqIR      ; index of leftmost, typically zero
+      </RT-code>
+
+      <p>
+        The <RT-code>I</RT-code> <RT-code>arg</RT-code> descriptor causes <RT-code>q</RT-code> to return an index.
+        By default <RT-code>q</RT-code> returns a boolean value.
+        In other commands, an <RT-code>I</RT-code> <RT-code>arg</RT-code> descriptor indicates that an index argument is supplied.
+      </p>
+
+      <p>
+        The <RT-code>R</RT-code> <RT-code>arg</RT-code> descriptor focuses the command on the selected view rightmost cell.
+        For <RT-code>qR</RT-code>, the result is true iff the head is on rightmost.
+        For <RT-code>qIR</RT-code>, the result is the index of rightmost.
+        Under <RT-code>L</RT-code>, that rightmost cell is the base view leftmost cell, so <RT-code>LqIR</RT-code> returns the index of leftmost, typically zero.
+      </p>
+
+      <h4>Copying to and from tape cells and python variables</h4>
+      <RT-code>
+        r          ; copies cell contents to the LHS of an assignment
+        w(v)       ; copies v into the cell
+      </RT-code>
+
+      <p>
+        The current <RT-code>r</RT-code> and <RT-code>w</RT-code> are cell local and are unaffected by <RT-code>L</RT-code>.
+        If we later support list forms or repetition forms for copy, <RT-code>L</RT-code> will affect the scan direction for those operations.
+      </p>
+
+      <h1>TM interface functions</h1>
+
+      <p>
+        This section lists the concrete methods exposed by the Python/C implementation.
+        These methods implement a selected subset of the command grammar.
+        The grammar defines a command language, while the primitive set defines the operations the library exposes directly.
+        Later sections can introduce a compile layer that accepts additional command combinations.
+      </p>
+
+      <p>
+        The <RT-code>L</RT-code> prefix is not implemented as a distinct family of primitives.
+        In the command language it selects the mirror view.
+        In the API the same effect is provided by explicit left primitives such as <RT-code>ls()</RT-code> and <RT-code>lsn(n)</RT-code>, or by allowing a signed <RT-code>n</RT-code> on machines that support step left.
+      </p>
+
+      <h2>Feature symbols and primitive availability</h2>
+
+      <p>
+        A TM is constructed with feature symbols that select which primitive families are present.
+        With no feature symbols, the result is a non-destructive step right machine with no indexing.
+        Enabling step left adds left motion primitives (or signed <RT-code>n</RT-code> support) and mirror view semantics in the command language.
+        Indexing is an independent feature: when enabled, index based query and cue forms become legal and corresponding primitives become available.
+      </p>
+
+      <h2>Navigation primitives</h2>
+
+      <p>
+        Navigation primitives implement the <RT-code>s</RT-code> command with the argument forms <RT-code>ε</RT-code>, <RT-code>n</RT-code>, and <RT-code>R</RT-code>.
+        On a step right only machine, <RT-code>n</RT-code> is constrained to positive values.
+        On a machine that supports step left, <RT-code>n</RT-code> can be negative, with the sign selecting direction in the base view.
+      </p>
+
+      <ul>
+        <li><RT-code>s()</RT-code> steps to the right neighbor. (Command form: <RT-code>s</RT-code>.)</li>
+        <li><RT-code>sn(n)</RT-code> steps by <RT-code>n</RT-code> cells. On a step right only machine, <RT-code>n</RT-code> must be positive. (Command form: <RT-code>sn(n)</RT-code>.)</li>
+        <li><RT-code>sR()</RT-code> cues the head to the selected view rightmost cell. (Command form: <RT-code>sR</RT-code>.)</li>
+      </ul>
+
+      <p>
+        If step left is enabled, left motion is available either as explicit primitives, or via negative <RT-code>n</RT-code> on <RT-code>sn(n)</RT-code>, depending on the configured interface.
+        When explicit left primitives exist, they correspond to the mirror view command forms.
+      </p>
+
+      <ul>
+        <li><RT-code>ls()</RT-code> steps to the left neighbor. (Command form: <RT-code>Ls</RT-code>.)</li>
+        <li><RT-code>lsn(n)</RT-code> steps left <RT-math>n</RT-math> times. (Command form: <RT-code>Lsn(n)</RT-code>.)</li>
+        <li><RT-code>lsR()</RT-code> cues the head to leftmost. (Command form: <RT-code>LsR</RT-code>.)</li>
+      </ul>
+
+      <p>
+        Note the correspondence: <RT-code>sR</RT-code> cues rightmost in the base view, and <RT-code>LsR</RT-code> cues leftmost of that same underlying tape.
+        The primitives <RT-code>sR()</RT-code> and <RT-code>lsR()</RT-code> are optimized cues.
+      </p>
+
+      <h2>Input and output primitives</h2>
+
+      <p>
+        The I/O primitives implement <RT-code>r</RT-code> and <RT-code>w(value)</RT-code>.
+        In the command language, <RT-code>r</RT-code> reads the current cell payload, and <RT-code>w(v)</RT-code> writes a payload to the current cell.
+        As of the time of this writing, these operations are cell local, so mirror view does not change their behavior.
+      </p>
+
+      <ul>
+        <li><RT-code>r()</RT-code> reads the current cell.</li>
+        <li><RT-code>w(v)</RT-code> writes <RT-code>v</RT-code> to the current cell.</li>
+      </ul>
+
+      <p>
+        Bulk forms can exist in the API, but they are not represented in the current command grammar.
+        They are library level conveniences built on top of repeated primitive behavior.
+        If bulk copy forms become part of the command grammar later, mirror view will affect scan direction for those operations.
+      </p>
+
+      <ul>
+        <li><RT-code>rn(n)</RT-code> reads <RT-math>n</RT-math> cells.</li>
+        <li><RT-code>wn(list)</RT-code> writes a list of values.</li>
+      </ul>
+
+<h2>Destructive Primitives</h2>
+
+      <p>
+        Machines configured with the <RT-code>SO</RT-code> (Solitary) entanglement approach may expose primitives that modify the tape structure.
+        These are distinct from <RT-code>w</RT-code> (which modifies cell <em>content</em>) because they change the cell <em>count</em> or <em>sequence</em>.
+      </p>
+
+      <p>
+        <strong>Note:</strong> Not all container types support all destructive operations. For example, <RT-code>ARR</RT-code> (Fixed Array) does not support deletion or insertion, whereas <RT-code>ARRV</RT-code> (Variable Array) does.
+      </p>
+
+      <h3>Delete (<RT-code>d</RT-code>)</h3>
+      <p>
+        Removes cells from the tape. The head typically lands on the right neighbor of the deleted segment.
+      </p>
+      <ul>
+        <li><RT-code>d()</RT-code>: Deletes the current cell.</li>
+        <li><RT-code>dn(n)</RT-code>: Deletes <RT-code>n</RT-code> cells starting from current.</li>
+        <li><RT-code>dR()</RT-code>: Deletes from current to Rightmost (inclusive).</li>
+        <li><RT-code>dL()</RT-code>: Deletes from current to Leftmost (inclusive).</li>
+      </ul>
+
+      <h3>Delete Neighbor (<RT-code>esd</RT-code>)</h3>
+      <p>
+        A compound-style primitive that deletes a neighbor without moving the active head.
+        Mnemonic: <em>Entangle-Step-Delete</em> (conceptually acts on the neighbor).
+      </p>
+      <ul>
+        <li><RT-code>esd()</RT-code>: Deletes the immediate right neighbor. Guard: Requires <RT-code>not qR()</RT-code>.</li>
+        <li><RT-code>esdn(n)</RT-code>: Deletes <RT-code>n</RT-code> right neighbors.</li>
+        <li><RT-code>Lesd()</RT-code>: Deletes the immediate left neighbor. Guard: Requires <RT-code>not qL()</RT-code>.</li>
+      </ul>
+
+      <h3>Insert/Append (<RT-code>a</RT-code>)</h3>
+      <ul>
+        <li><RT-code>a(v)</RT-code>: Inserts value <RT-code>v</RT-code> at the current head position. The old current cell shifts right.</li>
+        <li><RT-code>an(list)</RT-code>: Splices a list of values at the current position.</li>
+      </ul>
+
+      <h2>Query primitives</h2>
+
+      <p>
+        Query primitives are built from the <RT-code>q</RT-code> command.
+        On the step right only machine, the primitive set covers the boolean query forms.
+        When indexing is enabled as an additional feature, index valued query forms become available.
+      </p>
+
+      <ul>
+        <li><RT-code>qR()</RT-code> returns whether the head is on the selected view rightmost cell. (Command form: <RT-code>qR</RT-code>.)</li>
+      </ul>
+
+      <p>
+        If indexing is enabled, the API also exposes index query primitives.
+        These correspond to the <RT-code>I</RT-code> arg descriptor in the command language.
+      </p>
+
+      <ul>
+        <li><RT-code>qI()</RT-code> returns the current head index. (Command form: <RT-code>qI</RT-code>.)</li>
+        <li><RT-code>qIR()</RT-code> returns the index of the selected view rightmost cell. (Command form: <RT-code>qIR</RT-code>.)</li>
+      </ul>
+
+      <p>
+        Mirror view query forms follow the same rule in the command language.
+        For example, <RT-code>LqR</RT-code> tests the leftmost of the underlying tape, and <RT-code>LqIR</RT-code> returns its index, typically zero.
+      </p>
+
+      <h2>Entanglement primitives</h2>
+
+      <p>
+        Entanglement primitives implement the <RT-code>e</RT-code> command.
+        The entangled machine shares the tape with the original machine and and initially have their head on the same cell.
+        In entanglement accounting configurations, entangled machines also share the group catalog used by guard predicates.
+      </p>
+
+      <ul>
+        <li><RT-code>e()</RT-code> returns a new entangled machine sharing the same tape. (Command form: <RT-code>e</RT-code>.)</li>
+      </ul>
+
+      <p>
+        Combined command forms such as <RT-code>es</RT-code> are legal in the grammar, but they are not required as primitives.
+        The library can expose such combinations as convenience calls, or generate them through a compile layer.
+        The core model remains that a statement is a sequence of commands applied to a selected view.
+      </p>
+
+      <h1>Usage</h1>
+
+      <h2>First order TM properties</h2>
+
+      <p>
+        For a first order TM these properties are always true.
+      </p>
+
+      <ol>
+        <li>The head is always on a valid cell.</li>
+        <li>All cells return a value when read.</li>
+      </ol>
+
+      <p>
+        In order to maintain these properties, a TM uses inclusive bounds for intervals, including intervals of cells, and intervals of indexes.
+      </p>
+
+      <h2>Contract with the programmer</h2>
+
+      <p>
+        Some first order TM types rely upon the caller to maintain a contract.
+        Such machines typically have debug variants that add contract checks.
+        For some machines, breaking the contract limits compiler optimization.
+        For other machines, breaking the contract causes program bugs.
+      </p>
+
+      <p>
+        <strong>Contract:</strong>
+      </p>
+
+      <ol>
+        <li>When there is a right bound, the caller guarantees that he will never command the machine to step beyond the rightmost cell.</li>
+        <li>When there is a left bound, the caller guarantees that he will never command the machine to step left of the leftmost cell.</li>
+      </ol>
+
+      <p>
+        When traversing a tape, the contract is fulfilled by a First Rest pattern.
+      </p>
+
+      <h1>First Rest pattern with initialization</h1>
+
+      <RT-code>
+        # Pattern 1: First Rest (Initialize with First)
+        # Useful when the accumulator starts with the first value.
+        total = tm.r()      # Process First
+        while not tm.qR():  # Guard: Is there a Rest?
+          tm.s()          # Step (Protected)
+          total += tm.r() # Process Next
+      </RT-code>
+
+      <p>
+        Here <RT-code>tm.qR()</RT-code> queries whether the head is on the selected view rightmost cell.
+        It guards the step in the loop.
+        No redundant tests are done, and the loop ends without stepping off the tape.
+      </p>
+
+      <h1>First Rest pattern without initialization</h1>
+
+      <p>
+        Sometimes the accumulator is initialized to an identity value (such as zero) before the loop starts.
+        In that form, the loop and a half structure is natural.
+      </p>
+
+      <RT-code>
+        # Conceptual "do" loop
+        do:
+          total += tm.r()   # Always process the current cell
+          if tm.qR() break  # protects increment from spilling over
+          tm.s()            # Step only when not at the end
+      </RT-code>
+
+      <p>
+        Python has no <RT-code>do</RT-code> statement, so the same logic is written explicitly:
+      </p>
+
+      <RT-code>
+        # Python implementation
+        while True:
+          total += tm.r()
+          if tm.qR(): break
+          tm.s()
+      </RT-code>
+
+      <p>
+        The middle test <RT-code>tm.qR()</RT-code> guards <RT-code>tm.s()</RT-code>, so the machine never steps beyond rightmost.
+      </p>
+
+      <h1>Region Machine</h1>
+
+      <p> A <RT-term>Region Machine</RT-term> is a composite structure built from three entangled tape machines. It enforces the invariant that the active head remains within a specified closed interval of the tape. </p>
+
+      <h2>Structure</h2>
+
+      <p> The Region Machine consists of: </p> <ul> <li><strong>Left Boundary Machine:</strong> A TM marking the leftmost valid cell of the region.</li> <li><strong>Right Boundary Machine:</strong> A TM marking the rightmost valid cell of the region.</li> <li><strong>Active Machine:</strong> The TM interface exposed to the user for navigation and I/O.</li> </ul>
+
+      <p> Because the Region Machine relies on the First Order invariant (head always on a valid cell), a region cannot be empty. The minimum region size is one cell, where the Left Boundary, Right Boundary, and Active Head all occupy the same cell. </p>
+
+      <h2>Behavior</h2>
+
+      <p> The Region Machine implements the standard TM interface but constrains movement based on the boundary heads. </p>
+
+      <ul> <li><strong>Step (<RT-code>s</RT-code>):</strong> The Active Head performs a step only if it is not currently on the Right Boundary cell. <ul> <li><RT-code>s()</RT-code> requires <RT-code>not qR()</RT-code>.</li> </ul> </li> <li><strong>Step Left (<RT-code>ls</RT-code>):</strong> The Active Head performs a left step only if it is not currently on the Left Boundary cell. <ul> <li><RT-code>ls()</RT-code> requires <RT-code>not qL()</RT-code>.</li> </ul> </li> <li><strong>Query Bounds (<RT-code>qR</RT-code>, <RT-code>qL</RT-code>):</strong> <ul> <li><RT-code>qR()</RT-code> returns true if the Active Head is on the same cell as the Right Boundary Head.</li> <li><RT-code>qL()</RT-code> returns true if the Active Head is on the same cell as the Left Boundary Head.</li> </ul> </li> <li><strong>Cue Bounds (<RT-code>sR</RT-code>, <RT-code>lsR</RT-code>):</strong> <ul> <li><RT-code>sR()</RT-code> moves the Active Head to the cell occupied by the Right Boundary Head.</li> <li><RT-code>lsR()</RT-code> moves the Active Head to the cell occupied by the Left Boundary Head.</li> </ul> </li> </ul>
+
+      <h2>Boundary Management</h2>
+
+      <p> The boundaries of a region are themselves Tape Machines. This allows the region to expand or contract dynamically. Moving a boundary head changes the effective range of the Active Machine immediately. </p>
+
+      <p> <strong>Safety Constraint:</strong> A boundary head cannot step past the other boundary head. The Left Boundary must always be to the left of or on the same cell as the Right Boundary. Furthermore, the Active Head must not be orphaned by boundary movement. If the Right Boundary steps left past the Active Head, the Active Head is no longer valid. Therefore, boundary contraction requires checking or moving the Active Head to maintain the invariant. </p>
+
+      <h1>TM Workspace functions</h1>
+
+      <p> The <RT-code>TM_workspace</RT-code> namespace contains higher-level functions that coordinate multiple machines. These functions are not part of the core TM interface but operate on TMs to implement common algorithms. </p>
+
+      <h2>Tandem operations</h2>
+
+      <p> Tandem operations drive multiple machines simultaneously. They are useful for copying, comparing, or parallel processing. </p>
+
+      <ul> <li><RT-code>step_tandem(tm1, tm2)</RT-code>: Steps both machines to their respective right neighbors. Requires that neither machine is at its rightmost bound.</li> <li><RT-code>zip_apply(f, tm1, tm2)</RT-code>: Applies function <RT-code>f</RT-code> to the values read from <RT-code>tm1</RT-code> and <RT-code>tm2</RT-code>, then steps both.</li> </ul>
+
+      <h2>Predicates</h2>
+
+      <p> Predicates test relationships between entangled machines. </p>
+
+      <ul> <li><RT-code>head_on_same_cell(tm1, tm2)</RT-code>: Returns true if the heads of two entangled machines are on the same cell. This is the fundamental primitive used to implement <RT-code>qR</RT-code> in Region Machines.</li> </ul>
+
+
+      <script src="style/style_orchestrator.js"></script>
+      <script>
+        window.StyleRT.style_orchestrator();
+      </script>
+
+      <h1>Second Order Machine (TMS)</h1>
+
+      <p> A <RT-term>Second Order Machine</RT-term>, or <RT-code>TMS</RT-code> (Tape Machine Status), is a wrapper that manages the lifecycle of a First Order Tape Machine. It introduces the concept of <RT-term>status</RT-term> to handle conditions that violate First Order invariants, specifically the absence of valid cells (emptiness). </p>
+
+      <h2>Status definitions</h2>
+
+      <p> The TMS manages a state machine where the states are called <RT-term>statuses</RT-term> to distinguish them from the internal state of the tape or head. The current status determines which interface functions are available to the programmer. </p>
+
+      <ul> <li><RT-code>Active</RT-code>: The machine contains cells. The underlying First Order TM is valid. All standard TM navigation and I/O commands function normally.</li> <li><RT-code>Empty</RT-code>: The machine contains no cells. There is no tape and no head position. First Order operations like <RT-code>r</RT-code> or <RT-code>s</RT-code> are invalid and will raise errors if called. Only status-query and insertion operations are available.</li> <li><RT-code>Parked</RT-code>: The machine contains cells, but the head is effectively "lifted" from the tape. The head is not on any valid cell. This status is often used during initialization or after a search fails to find a target.</li> </ul>
+
+      <h2>Dynamic interface dispatch</h2>
+
+      <p> The TMS implementation uses dynamic dispatch (or mixin replacement) to enforce status constraints. When the status changes, the interface functions are swapped. </p>
+
+      <p> For example, in the <RT-code>Empty</RT-code> status, the <RT-code>r()</RT-code> function is mapped to an error handler: <RT-code>Error: Attempted to read from an empty machine.</RT-code> This prevents the programmer from accidentally running First Order logic on a machine that does not satisfy the First Order invariant. </p>
+
+      <h2>Transitions</h2>
+
+      <p> Status changes occur when operations alter the cell count to or from zero, or when the head is explicitly parked or unparked. </p>
+
+      <h3>Promotion (Empty to Active)</h3> <p> When a TMS is <RT-code>Empty</RT-code>, calling an insertion function (e.g., <RT-code>append(v)</RT-code>) creates the first cell. The status transitions to <RT-code>Active</RT-code>. The interface is updated to expose standard TM behaviors. The head is placed on the newly created cell. </p>
+
+      <h3>Demotion (Active to Empty)</h3> <p> If a deletion operation removes the last remaining cell of an <RT-code>Active</RT-code> machine, the First Order invariant is broken. The TMS detects this event, destroys the underlying First Order TM, and transitions the status to <RT-code>Empty</RT-code>. The interface is updated to the restricted Empty set. </p>
+
+      <h2>Usage with algorithms</h2>
+
+      <p> Algorithms requiring a First Order TM (such as <RT-code>foreach</RT-code> loops or First Rest patterns) must effectively be guarded by a status check. </p>
+
+      <RT-code> if tms.is_active(): # Safe to treat as a First Order TM run_algorithm(tms) else: # Handle empty case pass </RT-code>
+
+      <p> Because the TMS implements the TM interface, it can be passed directly to these algorithms. However, if the status is <RT-code>Empty</RT-code>, the first operation attempted by the algorithm (usually <RT-code>r()</RT-code>) will trigger a "second order" error, alerting the programmer that they neglected the guard. </p>
+
+      <h1>Machine Naming Convention</h1>
+
+      <p>
+        Concrete Tape Machine classes follow a strict naming grammar. This grammar acts as a feature descriptor, allowing the programmer to select a machine by constructing its name.
+      </p>
+
+      <p>
+        The name is composed of three feature segments: the <RT-term>Container Type</RT-term>, the <RT-term>Step Direction</RT-term>, and the <RT-term>Entanglement Approach</RT-term>.
+      </p>
+
+      <h3>grammar</h3>
+      <RT-code>
+        class_name   :: TM [ _container ] [ _direction ] [ _entanglement ]
+        container    :: ARR | ARRV | GR | GLR | SET | MAP | MAPK | MAPV 
+                      | ASCII | UTF8 | BCD
+        direction    :: SR | SL
+        entanglement :: ND | SO | EA
+      </RT-code>
+
+      <p>
+        Segments are separated by underscores. The default configuration for a segment is used if that segment is omitted.
+        The default machine is <RT-code>TM_ARR_SR_ND</RT-code> (Fixed Array, Step Right, Non-Destructive).
+      </p>
+
+      <h4>container</h4>
+      <ul>
+        <li><RT-code>ARR</RT-code> <strong>Arr</strong>ay Fixed (Default). A contiguous sequence of fixed length (e.g., Python List, C Array).</li>
+        <li><RT-code>ARRV</RT-code> <strong>Arr</strong>ay <strong>V</strong>ariable. A contiguous sequence that may resize (e.g., Vector).</li>
+        <li><RT-code>GR</RT-code> <strong>G</strong>raph <strong>R</strong>ight. A node-based sequence with a single right neighbor (Singly Linked List).</li>
+        <li><RT-code>GLR</RT-code> <strong>G</strong>raph <strong>L</strong>eft <strong>R</strong>ight. A node-based sequence with left and right neighbors (Doubly Linked List).</li>
+        <li><RT-code>SET</RT-code> <strong>Set</strong>. Iteration over the elements of a Set.</li>
+        <li><RT-code>MAP</RT-code> <strong>Map</strong>. Iteration over the items (Key-Value pairs) of a Map.</li>
+        <li><RT-code>MAPK</RT-code> <strong>Map</strong> <strong>K</strong>eys. Iteration over the keys of a Map.</li>
+        <li><RT-code>MAPV</RT-code> <strong>Map</strong> <strong>V</strong>alues. Iteration over the values of a Map.</li>
+        <li><RT-code>ASCII</RT-code> <strong>Ascii</strong>. A sequence of 1-byte characters.</li>
+        <li><RT-code>UTF8</RT-code> <strong>Utf8</strong>. A sequence of variable-width Unicode characters.</li>
+        <li><RT-code>BCD</RT-code> <strong>Bcd</strong>. A sequence of Binary Coded Decimal values.</li>
+      </ul>
+
+      <h4>direction</h4>
+      <ul>
+        <li><RT-code>SR</RT-code> <strong>S</strong>tep <strong>R</strong>ight (Default). The machine head can only be moved to the right.</li>
+        <li><RT-code>SL</RT-code> <strong>S</strong>tep <strong>L</strong>eft. The machine is bidirectional, supports stepping either right or left.</li>
+      </ul>
+
+      <h4>entanglement</h4>
+      <ul>
+        <li><RT-code>ND</RT-code> <strong>N</strong>on-<strong>D</strong>estructive (Default). Safe for entanglement.</li>
+        <li><RT-code>SO</RT-code> <strong>So</strong>litary. Exclusive ownership; supports destructive ops.</li>
+        <li><RT-code>EA</RT-code> <strong>E</strong>ntanglement <strong>A</strong>ccounting. Shared access guarded by a catalog.</li>
+      </ul>
+
+      <h3>Abstract and Traversal Machines</h3>
+      <p>
+        The naming convention extends to Abstract and Traversal machines using specific prefixes.
+      </p>
+      <ul>
+        <li><RT-code>TMA</RT-code> <strong>TM</strong> <strong>A</strong>bstract. Virtual tapes computed over state.
+          <br><em>Example:</em> <RT-code>TMA_Natural_Number</RT-code> (Iterates 0, 1, 2...).</li>
+        <li><RT-code>TMT</RT-code> <strong>TM</strong> <strong>T</strong>raversal. Algorithmic traversals over non-linear structures.
+          <br><em>Example:</em> <RT-code>TMT_Tree_DepthFirst</RT-code> (Linearizes a tree via stack/recursion).</li>
+      </ul>
+
+
+    </RT-article>
+  </body>
+</html>

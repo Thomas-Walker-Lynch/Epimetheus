@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>TM User Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+
+    <script src="style/body_visibility_hidden.js"></script>
+    <script>
+      window.StyleRT.body_visibility_hidden();
+    </script>
+
+    <script src="style/utility.js"></script>
+    <script src="style/theme_dark_gold.js"></script>
+    <script src="style/article_tech_ref.js"></script>
+    <script src="style/RT_math.js"></script>
+    <script src="style/RT_code.js"></script>
+    <script src="style/RT_term.js"></script>
+    <script src="style/RT_TOC.js"></script>
+  </head>
+  <body>
+    <RT-article>
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-02-11" 
+        title="Tape Machine User Guide">
+      </RT-title>
+
+      <RT-TOC level="1"></RT-TOC>
+
+      <h1>Introduction</h1>
+
+      <p>
+        A <RT-term>Tape Machine</RT-term> (TM) is an abstract mechanism for manipulating data found in sequences.
+        Such sequences include lists, arrays, sets (given an ordering function), maps (given an ordering function), and linear traversals of more complex structures.
+        The theory underpinning the TM is discussed in the <RT-term>TTCA</RT-term> book.
+      </p>
+
+      <p>
+        Unlike standard arrays (which are stateless) or iterators (which are transient), a TM combines a data substrate with a persistent <RT-term>head</RT-term>.
+        The head maintains positional state, allowing the programmer to navigate, read, and write tape cells.
+      </p>
+
+      <p>
+        A defining invariant of a <RT-term>first order</RT-term> TM is:
+        the head is always on a valid cell.
+        This invariant makes the primitive interface total.
+        Every move, read, write, and query has a clean, well defined meaning, and caller code stays free of scattered end case tests.
+      </p>
+
+      <h1>Choosing a machine</h1>
+
+      <p>
+        In the current implementation, you choose a TM by choosing a concrete TM class.
+        Machine capabilities are encoded in the class name.
+        Concrete machines require a <RT-term>data object</RT-term> at construction time.
+        Abstract machines do not require a data object, but they come later.
+      </p>
+
+      <p>
+        The default concrete machine is <RT-code>TM_ARRAY_SR_ND(data_obj)</RT-code>.
+        It treats the data object as a Python array of cell payload pointers.
+      </p>
+
+      <h2>Machine naming convention</h2>
+
+      <p>
+        First order concrete machines use this name form:
+      </p>
+
+      <RT-code>
+        TM_&lt;CONTAINER&gt;_&lt;TRAVERSAL&gt;_&lt;ENTANGLEMENT&gt;
+      </RT-code>
+
+      <p>
+        Abstract machines (virtual tapes) use:
+      </p>
+
+      <RT-code>
+        TMA_&lt;ABSTRACT_NAME&gt;
+      </RT-code>
+
+      <h2>Field meanings</h2>
+
+      <ul>
+        <li><strong>CONTAINER</strong>: the backing data substrate.</li>
+        <li><strong>TRAVERSAL</strong>: which directions the head can move.</li>
+        <li><strong>ENTANGLEMENT</strong>: what sharing and structural mutation rules apply.</li>
+      </ul>
+
+      <h1>Command language</h1>
+
+      <p>
+        The command language is not used directly.
+        It describes the letter patterns used to form TM interface method names.
+        The approach began with LISP, and its extension is described in the paper
+        "Towards a Better Understanding of CAR, CDR, CADR and the Others".
+      </p>
+
+      <p>
+        A method name is a sequence of command groups.
+        Parsing is left to right.
+        Each command letter begins a new group.
+        Any argument descriptors that follow attach to that group until the next command letter appears.
+      </p>
+
+      <p>
+        Example: <RT-code>snr(i)</RT-code> denotes two groups.
+        <RT-code>sn(i)</RT-code> steps right <RT-code>i</RT-code> times, then <RT-code>r()</RT-code> reads the current cell.
+      </p>
+
+      <h2>Core commands</h2>
+
+      <ul>
+        <li><RT-code>e</RT-code> entangle</li>
+        <li><RT-code>q</RT-code> query</li>
+        <li><RT-code>r</RT-code> read</li>
+        <li><RT-code>s</RT-code> step</li>
+        <li><RT-code>w</RT-code> write</li>
+      </ul>
+
+      <h2>Argument descriptors</h2>
+
+      <ul>
+        <li><RT-code>n</RT-code> repetition count</li>
+        <li><RT-code>R</RT-code> selected view rightmost</li>
+      </ul>
+
+      <h2>Mirror view</h2>
+
+      <p>
+        Some machines support stepping left as well as right.
+        In the command language, the <RT-code>L</RT-code> prefix selects the mirror view for the command group that follows it.
+        In the mirror view, rightward operations correspond to leftward operations in the base view.
+        What is rightmost in the base view becomes leftmost in the mirror view, and vice versa.
+      </p>
+
+      <p>
+        In the Python API, mirror view forms are exposed as explicit left methods, such as <RT-code>ls()</RT-code> for <RT-code>Ls</RT-code> and <RT-code>lsR()</RT-code> for <RT-code>LsR</RT-code>.
+      </p>
+
+      <h1>Entanglement and safety</h1>
+
+      <p>
+        Tape machines that share a tape are said to be <RT-neologism>entangled</RT-neologism>.
+        There are both data hazards and control hazards among entangled machines.
+        Data hazards relate to unexpected writes and reads and can lead to incorrect results.
+        Control hazards can break machines.
+        The primary control hazard is one machine deleting a cell that another machine is visiting, which violates
+        <em>a tape machine head is always on a valid cell</em>.
+      </p>
+
+      <p>
+        Entanglement policy is encoded in the machine name:
+      </p>
+
+      <ul>
+        <li><RT-code>ND</RT-code> non destructive. No structural deletion or insertion exists on the interface, so entangled machines cannot break each other.</li>
+        <li><RT-code>SO</RT-code> solitary. The interface has structural mutation, but no entanglement operations exist, so machines do not share tapes.</li>
+        <li><RT-code>EA</RT-code> entanglement accounting. Structural mutation and entanglement exist, and caller code uses guard predicates to avoid control hazards.</li>
+      </ul>
+
+      <h1>Usage patterns</h1>
+
+      <h2>First Rest pattern with initialization</h2>
+
+      <RT-code>
+        # Pattern 1: First Rest (Initialize with First)
+        # Useful when the accumulator starts with the first value.
+        total = tm.r()      # Process First
+        while not tm.qR():  # Guard: Is there a Rest?
+          tm.s()            # Step (Protected)
+          total += tm.r()   # Process Next
+      </RT-code>
+
+      <h2>First Rest pattern without initialization</h2>
+
+      <RT-code>
+        while True:
+          total += tm.r()
+          if tm.qR(): break
+          tm.s()
+      </RT-code>
+
+      <h1>Composite machines</h1>
+
+      <h2>Region Machine</h2>
+
+      <p>
+        A <RT-term>Region Machine</RT-term> is a composite built from three entangled tape machines.
+        It enforces the invariant that the active head stays within a specified closed interval of the tape.
+      </p>
+
+      <ul>
+        <li><strong>Left boundary machine</strong>: marks the leftmost valid cell of the region.</li>
+        <li><strong>Right boundary machine</strong>: marks the rightmost valid cell of the region.</li>
+        <li><strong>Active machine</strong>: the interface exposed to caller code.</li>
+      </ul>
+
+      <p>
+        In the command language, the active head is on the left boundary iff <RT-code>LqR</RT-code> is true in the active view.
+        In the Python API, that corresponds to an explicit left query helper, or to a predicate that tests whether two entangled heads are on the same cell.
+      </p>
+
+      <h2>TM workspace functions</h2>
+
+      <p>
+        The <RT-code>TM_workspace</RT-code> namespace contains higher level functions that coordinate multiple machines.
+        These functions are not part of the core TM interface.
+      </p>
+
+      <h1>Second order machine</h1>
+
+      <p>
+        A <RT-term>second order</RT-term> TM, <RT-code>TMS</RT-code> (Tape Machine Status), is a wrapper that manages the lifecycle of a first order TM.
+        It introduces explicit <RT-term>status</RT-term> values to represent conditions that violate first order invariants, such as emptiness.
+      </p>
+
+            <script src="style/style_orchestrator.js"></script>
+      <script>
+        window.StyleRT.style_orchestrator();
+      </script>
+
+    </RT-article>
+  </body>
+</html>
