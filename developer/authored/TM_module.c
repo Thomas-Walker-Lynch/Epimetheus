@@ -3,7 +3,7 @@
   CPython Extension: Tape Machine Factory
   
   Implements:
-    - 66 Concrete Machine Types
+    - 60 Concrete Machine Types (Chiral naming: CR/CLR)
     - TMA_NaturalNumber (Abstract Machine)
 
   Namespaces:
@@ -22,25 +22,6 @@
 /* ========================================================= */
 /* UNIVERSAL HEAD STATE                                      */
 /* ========================================================= */
-
-/* LIMITATION OF C VOID POINTERS:
-   
-   In Standard ISO C, there is no way to "bind" a type to a void* pointer 
-   temporarily to perform arithmetic. A cast expression like '(Type*)ptr' 
-   yields a value (r-value), not a storage location (l-value), so we 
-   cannot perform operations like '((Type*)ptr)++'.
-   
-   To remain strictly ISO C compliant, we would have to define multiple 
-   structs (one for PyObject**, one for char*, etc.), which breaks our 
-   generic "Universal Head" architecture.
-   
-   DECISION: THE GCC/CLANG WAY
-   We utilize the common GCC/Clang extension that treats arithmetic on 
-   void* as byte-level arithmetic (i.e., sizeof(void) == 1).
-   
-   This allows us to write clean, polymorphic code:
-     self->head_ptr += sizeof(Element);
-*/
 
 typedef struct{
   PyObject_HEAD
@@ -88,53 +69,59 @@ static int TM·Arr·init(TM·Head* self, PyObject* args, PyObject* kwds){
   return 0;
 }
 
-/* Sync: Re-bases pointers after a List Reallocation */
 static void TM·Arr·sync(TM·Head* self){
-  /* 1. Calculate Logical Offset (Byte Distance) */
   Py_ssize_t byte_offset = self->head_ptr - self->start_ptr;
-
-  /* 2. Get NEW pointers */
   Py_ssize_t len = PyList_GET_SIZE(self->tape_obj);
   PyObject** new_items = ((PyListObject*)self->tape_obj)->ob_item;
-  
-  /* 3. Rebase */
   self->start_ptr = (void*)new_items;
   self->end_ptr   = (void*)(new_items + len);
-  
-  /* 4. Restore Head (Byte Arithmetic) */
   self->head_ptr  = self->start_ptr + byte_offset;
 }
 
-/* --- PRIMITIVES: NAVIGATION (The GCC Way) --- */
+static inline void TM·Arr·lazysync(TM·Head* self){
+  Py_ssize_t known_len = (self->end_ptr - self->start_ptr) / sizeof(PyObject*);
+  Py_ssize_t actual_len = PyList_GET_SIZE(self->tape_obj);
+  if (known_len != actual_len) {
+      TM·Arr·sync(self);
+  }
+}
+
+/* --- PRIMITIVES: NAVIGATION --- */
 
 static PyObject* TM·Arr·s(TM·Head* self){ 
+  TM·Arr·lazysync(self);
   self->head_ptr += sizeof(PyObject*);
   Py_RETURN_NONE; 
 }
 
-static PyObject* TM·Arr·ls(TM·Head* self){ 
+static PyObject* TM·Arr·Ls(TM·Head* self){ 
+  TM·Arr·lazysync(self);
   self->head_ptr -= sizeof(PyObject*);
   Py_RETURN_NONE; 
 }
 
 static PyObject* TM·Arr·sn(TM·Head* self, PyObject* args){
+  TM·Arr·lazysync(self);
   Py_ssize_t n; if(!PyArg_ParseTuple(args, "n", &n)) return NULL;
   self->head_ptr += n * sizeof(PyObject*);
   Py_RETURN_NONE;
 }
 
-static PyObject* TM·Arr·lsn(TM·Head* self, PyObject* args){
+static PyObject* TM·Arr·Lsn(TM·Head* self, PyObject* args){
+  TM·Arr·lazysync(self);
   Py_ssize_t n; if(!PyArg_ParseTuple(args, "n", &n)) return NULL;
   self->head_ptr -= n * sizeof(PyObject*);
   Py_RETURN_NONE;
 }
 
 static PyObject* TM·Arr·sR(TM·Head* self){ 
+  TM·Arr·lazysync(self);
   self->head_ptr = self->end_ptr - sizeof(PyObject*);
   Py_RETURN_NONE; 
 }
 
 static PyObject* TM·Arr·LsR(TM·Head* self){ 
+  TM·Arr·lazysync(self);
   self->head_ptr = self->start_ptr; 
   Py_RETURN_NONE; 
 }
@@ -142,16 +129,14 @@ static PyObject* TM·Arr·LsR(TM·Head* self){
 /* --- PRIMITIVES: ENTANGLEMENT --- */
 
 static PyObject* TM·Arr·e(TM·Head* self){
-  /* Create a new object of the same type */
+  TM·Arr·lazysync(self);
   PyTypeObject* type = Py_TYPE(self);
   TM·Head* new_tm = (TM·Head*)type->tp_alloc(type, 0);
   if (!new_tm) return NULL;
 
-  /* Share the tape */
   new_tm->tape_obj = self->tape_obj;
   Py_INCREF(new_tm->tape_obj);
 
-  /* Copy the pointers (Entangled start at same position) */
   new_tm->start_ptr = self->start_ptr;
   new_tm->end_ptr   = self->end_ptr;
   new_tm->head_ptr  = self->head_ptr;
@@ -162,13 +147,14 @@ static PyObject* TM·Arr·e(TM·Head* self){
 /* --- PRIMITIVES: I/O --- */
 
 static PyObject* TM·Arr·r(TM·Head* self){ 
-  /* Must cast to dereference the data */
+  TM·Arr·lazysync(self);
   PyObject* item = *(PyObject**)self->head_ptr; 
   Py_INCREF(item); 
   return item; 
 }
 
 static PyObject* TM·Arr·w(TM·Head* self, PyObject* val){
+  TM·Arr·lazysync(self);
   PyObject** p = (PyObject**)self->head_ptr;
   PyObject* old = *p; 
   Py_INCREF(val); 
@@ -180,78 +166,133 @@ static PyObject* TM·Arr·w(TM·Head* self, PyObject* val){
 /* --- PRIMITIVES: QUERY --- */
 
 static PyObject* TM·Arr·qR(TM·Head* self){ 
-  /* GCC Extension: void* comparison and arithmetic */
+  TM·Arr·lazysync(self);
   if(self->head_ptr >= self->end_ptr - sizeof(PyObject*)){
     Py_RETURN_TRUE;
   }
   Py_RETURN_FALSE;
 }
 
-static PyObject* TM·Arr·qL(TM·Head* self){ 
+static PyObject* TM·Arr·LqR(TM·Head* self){ 
+  TM·Arr·lazysync(self);
   if(self->head_ptr <= self->start_ptr){
     Py_RETURN_TRUE;
   }
   Py_RETURN_FALSE; 
 }
 
+static PyObject* TM·Arr·qnR(TM·Head* self){
+  TM·Arr·lazysync(self);
+  Py_ssize_t byte_diff = self->end_ptr - self->head_ptr;
+  /* If at Rightmost, diff is 1 item size. Result 0. */
+  Py_ssize_t count = (byte_diff / sizeof(PyObject*)) - 1;
+  return PyLong_FromSsize_t(count);
+}
 
-/* --- PRIMITIVES: DESTRUCTIVE (Variable Array Only) --- */
+static PyObject* TM·Arr·LqnR(TM·Head* self){
+  TM·Arr·lazysync(self);
+  Py_ssize_t byte_diff = self->head_ptr - self->start_ptr;
+  /* If at Leftmost, diff is 0. Result 0. */
+  Py_ssize_t count = byte_diff / sizeof(PyObject*);
+  return PyLong_FromSsize_t(count);
+}
 
-static PyObject* TM·Arr·d(TM·Head* self){
-  /* 1. Calc Index (Byte Diff / Element Size) */
-  Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
+/* --- PRIMITIVES: DESTRUCTIVE (SO Only) --- */
 
-  /* 2. API Call */
-  if (PyList_SetSlice(self->tape_obj, idx, idx+1, NULL) < 0) return NULL;
-  
-  /* 3. SYNC */
-  TM·Arr·sync(self);
-  
-  /* 4. Safety */
-  if (self->head_ptr >= self->end_ptr && self->start_ptr != self->end_ptr) {
-      self->head_ptr -= sizeof(PyObject*);
-  } else if (self->start_ptr == self->end_ptr) {
-      PyErr_SetString(PyExc_RuntimeError, "TM Empty: First Order Invariant Broken.");
+static PyObject* TM·Arr·dR(TM·Head* self){
+  TM·Arr·lazysync(self);
+  /* Delete from Current to Rightmost (inclusive) */
+  /* Guard: Must have a left neighbor to step back to. */
+  if (self->head_ptr <= self->start_ptr) {
+      PyErr_SetString(PyExc_RuntimeError, "Invariant Violation: Cannot dR from leftmost cell (tape would empty).");
       return NULL;
   }
+  Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
+  Py_ssize_t len = PyList_GET_SIZE(self->tape_obj);
+  
+  if (PyList_SetSlice(self->tape_obj, idx, len, NULL) < 0) return NULL;
+  
+  /* Current cell is gone. Step Left to valid neighbor. */
+  self->head_ptr -= sizeof(PyObject*);
+  TM·Arr·sync(self);
   Py_RETURN_NONE;
 }
 
-static PyObject* TM·Arr·a(TM·Head* self, PyObject* val){
+static PyObject* TM·Arr·LdR(TM·Head* self){
+  TM·Arr·lazysync(self);
+  /* Delete from Current to Leftmost (inclusive) */
+  /* Guard: Must have a right neighbor to step 'right' (reset) to. */
+  if (self->head_ptr >= self->end_ptr - sizeof(PyObject*)) {
+      PyErr_SetString(PyExc_RuntimeError, "Invariant Violation: Cannot LdR from rightmost cell (tape would empty).");
+      return NULL;
+  }
   Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
-
-  if (PyList_Insert(self->tape_obj, idx, val) < 0) return NULL;
   
+  if (PyList_SetSlice(self->tape_obj, 0, idx+1, NULL) < 0) return NULL;
+  
+  /* Head resets to 0 (the element that was to the right of deleted chunk) */
+  self->head_ptr = self->start_ptr; 
   TM·Arr·sync(self);
   Py_RETURN_NONE;
 }
 
 static PyObject* TM·Arr·esd(TM·Head* self){
+  TM·Arr·lazysync(self);
   if (self->head_ptr >= self->end_ptr - sizeof(PyObject*)) {
        PyErr_SetString(PyExc_IndexError, "esd: No right neighbor.");
        return NULL;
   }
-  
   Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
-  
   if (PyList_SetSlice(self->tape_obj, idx+1, idx+2, NULL) < 0) return NULL;
-  
   TM·Arr·sync(self);
   Py_RETURN_NONE;
 }
 
-static PyObject* TM·Arr·Lesd(TM·Head* self){
+static PyObject* TM·Arr·eLsd(TM·Head* self){
+  TM·Arr·lazysync(self);
   if (self->head_ptr <= self->start_ptr) {
-       PyErr_SetString(PyExc_IndexError, "Lesd: No left neighbor.");
+       PyErr_SetString(PyExc_IndexError, "eLsd: No left neighbor.");
        return NULL;
   }
-  
   Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
   if (PyList_SetSlice(self->tape_obj, idx-1, idx, NULL) < 0) return NULL;
   
-  /* Adjustment: Shift Left */
+  /* We removed item at idx-1. The item at idx is now at idx-1. */
   self->head_ptr -= sizeof(PyObject*);
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
 
+static PyObject* TM·Arr·esa(TM·Head* self, PyObject* val){
+  TM·Arr·lazysync(self);
+  /* Insert after current (at idx+1) */
+  Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
+  if (PyList_Insert(self->tape_obj, idx+1, val) < 0) return NULL;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·eLsa(TM·Head* self, PyObject* val){
+  TM·Arr·lazysync(self);
+  /* Insert before current (at idx) */
+  Py_ssize_t idx = (self->head_ptr - self->start_ptr) / sizeof(PyObject*);
+  if (PyList_Insert(self->tape_obj, idx, val) < 0) return NULL;
+  
+  /* Current item shifts right to idx+1. Increment head to track it. */
+  self->head_ptr += sizeof(PyObject*);
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·aR(TM·Head* self, PyObject* val){
+  if (PyList_Append(self->tape_obj, val) < 0) return NULL;
+  TM·Arr·sync(self);
+  Py_RETURN_NONE;
+}
+
+static PyObject* TM·Arr·LaR(TM·Head* self, PyObject* val){
+  if (PyList_Insert(self->tape_obj, 0, val) < 0) return NULL;
+  self->head_ptr += sizeof(PyObject*);
   TM·Arr·sync(self);
   Py_RETURN_NONE;
 }
@@ -262,59 +303,70 @@ static PyObject* TM·Arr·Lesd(TM·Head* self){
 /* ========================================================= */
 
 /* 1. NON-DESTRUCTIVE (ND) */
-static PyMethodDef Table·SR·ND[] = {
+static PyMethodDef Table·CR·ND[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
   {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
   {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
   {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
   {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Arr·qnR,METH_NOARGS,""},
+  {"LqnR",(PyCFunction)TM·Arr·LqnR,METH_NOARGS,""},
   {"LsR",(PyCFunction)TM·Arr·LsR,METH_NOARGS,""},
   {NULL}
 };
 
-static PyMethodDef Table·SL·ND[] = {
+static PyMethodDef Table·CLR·ND[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
   {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
-  {"ls",(PyCFunction)TM·Arr·ls,METH_NOARGS, ""},
-  {"lsn",(PyCFunction)TM·Arr·lsn,METH_VARARGS,""},
+  {"Ls",(PyCFunction)TM·Arr·Ls,METH_NOARGS, ""},
+  {"Lsn",(PyCFunction)TM·Arr·Lsn,METH_VARARGS,""},
   {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
   {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
   {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
-  {"qL",(PyCFunction)TM·Arr·qL,METH_NOARGS, ""},
+  {"LqR",(PyCFunction)TM·Arr·LqR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Arr·qnR,METH_NOARGS,""},
+  {"LqnR",(PyCFunction)TM·Arr·LqnR,METH_NOARGS,""},
   {"sR",(PyCFunction)TM·Arr·sR,METH_NOARGS, ""},
   {"LsR",(PyCFunction)TM·Arr·LsR,METH_NOARGS,""},
   {NULL}
 };
 
-/* 2. DESTRUCTIVE (SO) - For ArrV */
-static PyMethodDef Table·SR·SO[] = {
+/* 2. DESTRUCTIVE (SO) - No Entangle 'e' */
+static PyMethodDef Table·CR·SO[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
-  {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
   {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
   {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
-  {"d", (PyCFunction)TM·Arr·d, METH_NOARGS, ""}, 
-  {"a", (PyCFunction)TM·Arr·a, METH_O,      ""}, 
+  {"dR",(PyCFunction)TM·Arr·dR,METH_NOARGS, ""},
   {"esd",(PyCFunction)TM·Arr·esd,METH_NOARGS,""},
+  {"esa",(PyCFunction)TM·Arr·esa,METH_O,     ""},
+  {"aR",(PyCFunction)TM·Arr·aR,METH_O,       ""},
   {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Arr·qnR,METH_NOARGS,""},
+  {"LqnR",(PyCFunction)TM·Arr·LqnR,METH_NOARGS,""},
   {"LsR",(PyCFunction)TM·Arr·LsR,METH_NOARGS,""},
   {NULL}
 };
 
-static PyMethodDef Table·SL·SO[] = {
+static PyMethodDef Table·CLR·SO[] = {
   {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
-  {"ls",(PyCFunction)TM·Arr·ls,METH_NOARGS, ""},
-  {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
+  {"Ls",(PyCFunction)TM·Arr·Ls,METH_NOARGS, ""},
   {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
   {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
-  {"d", (PyCFunction)TM·Arr·d, METH_NOARGS, ""},
-  {"a", (PyCFunction)TM·Arr·a, METH_O,      ""},
+  {"dR",(PyCFunction)TM·Arr·dR,METH_NOARGS, ""},
+  {"LdR",(PyCFunction)TM·Arr·LdR,METH_NOARGS,""},
   {"esd",(PyCFunction)TM·Arr·esd,METH_NOARGS,""},
-  {"Lesd",(PyCFunction)TM·Arr·Lesd,METH_NOARGS,""},
+  {"eLsd",(PyCFunction)TM·Arr·eLsd,METH_NOARGS,""},
+  {"esa",(PyCFunction)TM·Arr·esa,METH_O,     ""},
+  {"eLsa",(PyCFunction)TM·Arr·eLsa,METH_O,   ""},
+  {"aR",(PyCFunction)TM·Arr·aR,METH_O,       ""},
+  {"LaR",(PyCFunction)TM·Arr·LaR,METH_O,     ""},
   {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
-  {"qL",(PyCFunction)TM·Arr·qL,METH_NOARGS, ""},
+  {"LqR",(PyCFunction)TM·Arr·LqR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Arr·qnR,METH_NOARGS,""},
+  {"LqnR",(PyCFunction)TM·Arr·LqnR,METH_NOARGS,""},
   {"sR",(PyCFunction)TM·Arr·sR,METH_NOARGS, ""},
   {"LsR",(PyCFunction)TM·Arr·LsR,METH_NOARGS,""},
   {NULL}
@@ -341,7 +393,7 @@ static PyObject* TM·Nat·sn(TM·Nat* self, PyObject* args){
   self->state += n; Py_RETURN_NONE;
 }
 
-static PyObject* TM·Nat·ls(TM·Nat* self){ 
+static PyObject* TM·Nat·Ls(TM·Nat* self){ 
   if(self->state > 0) self->state--; 
   Py_RETURN_NONE; 
 }
@@ -354,21 +406,36 @@ static PyObject* TM·Nat·w(TM·Nat* self, PyObject* val){
 }
 
 static PyObject* TM·Nat·qR(TM·Nat* self){ Py_RETURN_FALSE; }
-static PyObject* TM·Nat·qL(TM·Nat* self){ 
+static PyObject* TM·Nat·LqR(TM·Nat* self){ 
     if(self->state == 0){
       Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE; 
 }
 
+/* Nat Query N: 
+   qnR -> Infinite? Or not supported. For now, max int?
+   LqnR -> Distance from 0. Equal to state.
+*/
+static PyObject* TM·Nat·qnR(TM·Nat* self){ 
+    /* Abstract number line is infinite. */
+    PyErr_SetString(PyExc_RuntimeError, "Natural Number tape is infinite to the right.");
+    return NULL;
+}
+static PyObject* TM·Nat·LqnR(TM·Nat* self){ 
+    return PyLong_FromUnsignedLongLong(self->state);
+}
+
 static PyMethodDef TM·Nat·methods[] = {
   {"s", (PyCFunction)TM·Nat·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Nat·sn,METH_VARARGS,""},
-  {"ls",(PyCFunction)TM·Nat·ls,METH_NOARGS, ""},
+  {"Ls",(PyCFunction)TM·Nat·Ls,METH_NOARGS, ""},
   {"r", (PyCFunction)TM·Nat·r, METH_NOARGS, ""},
   {"w", (PyCFunction)TM·Nat·w, METH_O, ""},
   {"qR",(PyCFunction)TM·Nat·qR,METH_NOARGS, ""},
-  {"qL",(PyCFunction)TM·Nat·qL,METH_NOARGS, ""},
+  {"LqR",(PyCFunction)TM·Nat·LqR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Nat·qnR,METH_NOARGS, ""},
+  {"LqnR",(PyCFunction)TM·Nat·LqnR,METH_NOARGS, ""},
   {"LsR",(PyCFunction)TM·Nat·LsR,METH_NOARGS, ""},
   {NULL}
 };
@@ -386,7 +453,7 @@ static PyTypeObject TMA_NaturalNumber·Type = {
 
 
 /* ========================================================= */
-/* TYPE DEFINITIONS (The 66 Concrete Types)                  */
+/* TYPE DEFINITIONS (The 60 Concrete Types)                  */
 /* ========================================================= */
 
 #define DEFINE_TYPE(NAME, METHODS) \
@@ -404,114 +471,104 @@ static PyTypeObject NAME##·Type = { \
 /* ---------------------------------------------------------
    1. Arr (Fixed Array)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_Arr_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_Arr_SR_SO, Table·SR·ND) 
-DEFINE_TYPE(TM_Arr_SR_EA, Table·SR·ND)
+DEFINE_TYPE(TM_Arr_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_Arr_CR_SO, Table·CR·ND) 
+DEFINE_TYPE(TM_Arr_CR_EA, Table·CR·ND)
 
-DEFINE_TYPE(TM_Arr_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_Arr_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_Arr_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_Arr_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_Arr_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_Arr_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    2. ArrV (Variable Array / Vector)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_ArrV_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_ArrV_SR_SO, Table·SR·SO) /* Destructive */
-DEFINE_TYPE(TM_ArrV_SR_EA, Table·SR·ND)
+DEFINE_TYPE(TM_ArrV_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_ArrV_CR_SO, Table·CR·SO) /* Destructive */
+DEFINE_TYPE(TM_ArrV_CR_EA, Table·CR·ND)
 
-DEFINE_TYPE(TM_ArrV_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_ArrV_SL_SO, Table·SL·SO) /* Destructive */
-DEFINE_TYPE(TM_ArrV_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_ArrV_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_ArrV_CLR_SO, Table·CLR·SO) /* Destructive */
+DEFINE_TYPE(TM_ArrV_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    3. Gr (Graph Right / Linked List)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_Gr_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_Gr_SR_SO, Table·SR·ND)
-DEFINE_TYPE(TM_Gr_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_Gr_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_Gr_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_Gr_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_Gr_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_Gr_CR_SO, Table·CR·ND)
+DEFINE_TYPE(TM_Gr_CR_EA, Table·CR·ND)
+DEFINE_TYPE(TM_Gr_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_Gr_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_Gr_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    4. Glr (Graph Left Right / Doubly Linked List)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_Glr_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_Glr_SR_SO, Table·SR·ND)
-DEFINE_TYPE(TM_Glr_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_Glr_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_Glr_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_Glr_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_Glr_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_Glr_CR_SO, Table·CR·ND)
+DEFINE_TYPE(TM_Glr_CR_EA, Table·CR·ND)
+DEFINE_TYPE(TM_Glr_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_Glr_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_Glr_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    5. Set (Unordered)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_Set_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_Set_SR_SO, Table·SR·ND)
-DEFINE_TYPE(TM_Set_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_Set_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_Set_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_Set_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_Set_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_Set_CR_SO, Table·CR·ND)
+DEFINE_TYPE(TM_Set_CR_EA, Table·CR·ND)
+DEFINE_TYPE(TM_Set_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_Set_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_Set_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    6. Map (Items)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_Map_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_Map_SR_SO, Table·SR·ND)
-DEFINE_TYPE(TM_Map_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_Map_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_Map_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_Map_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_Map_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_Map_CR_SO, Table·CR·ND)
+DEFINE_TYPE(TM_Map_CR_EA, Table·CR·ND)
+DEFINE_TYPE(TM_Map_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_Map_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_Map_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    7. MapK (Keys)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_MapK_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_MapK_SR_SO, Table·SR·ND)
-DEFINE_TYPE(TM_MapK_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_MapK_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_MapK_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_MapK_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_MapK_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_MapK_CR_SO, Table·CR·ND)
+DEFINE_TYPE(TM_MapK_CR_EA, Table·CR·ND)
+DEFINE_TYPE(TM_MapK_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_MapK_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_MapK_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    8. MapV (Values)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_MapV_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_MapV_SR_SO, Table·SR·ND)
-DEFINE_TYPE(TM_MapV_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_MapV_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_MapV_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_MapV_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_MapV_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_MapV_CR_SO, Table·CR·ND)
+DEFINE_TYPE(TM_MapV_CR_EA, Table·CR·ND)
+DEFINE_TYPE(TM_MapV_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_MapV_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_MapV_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    9. ASCII (String)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_ASCII_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_ASCII_SR_SO, Table·SR·ND) 
-DEFINE_TYPE(TM_ASCII_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_ASCII_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_ASCII_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_ASCII_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_ASCII_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_ASCII_CR_SO, Table·CR·ND) 
+DEFINE_TYPE(TM_ASCII_CR_EA, Table·CR·ND)
+DEFINE_TYPE(TM_ASCII_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_ASCII_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_ASCII_CLR_EA, Table·CLR·ND)
 
 /* ---------------------------------------------------------
    10. UTF8 (String)
    --------------------------------------------------------- */
-DEFINE_TYPE(TM_UTF8_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_UTF8_SR_SO, Table·SR·ND)
-DEFINE_TYPE(TM_UTF8_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_UTF8_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_UTF8_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_UTF8_SL_EA, Table·SL·ND)
-
-/* ---------------------------------------------------------
-   11. BCD (String/Array)
-   --------------------------------------------------------- */
-DEFINE_TYPE(TM_BCD_SR_ND, Table·SR·ND)
-DEFINE_TYPE(TM_BCD_SR_SO, Table·SR·ND)
-DEFINE_TYPE(TM_BCD_SR_EA, Table·SR·ND)
-DEFINE_TYPE(TM_BCD_SL_ND, Table·SL·ND)
-DEFINE_TYPE(TM_BCD_SL_SO, Table·SL·ND)
-DEFINE_TYPE(TM_BCD_SL_EA, Table·SL·ND)
+DEFINE_TYPE(TM_UTF8_CR_ND, Table·CR·ND)
+DEFINE_TYPE(TM_UTF8_CR_SO, Table·CR·ND)
+DEFINE_TYPE(TM_UTF8_CR_EA, Table·CR·ND)
+DEFINE_TYPE(TM_UTF8_CLR_ND, Table·CLR·ND)
+DEFINE_TYPE(TM_UTF8_CLR_SO, Table·CLR·ND)
+DEFINE_TYPE(TM_UTF8_CLR_EA, Table·CLR·ND)
 
 
 /* ========================================================= */
@@ -532,48 +589,44 @@ PyMODINIT_FUNC PyInit_TM_module(void){
   if(!m) return NULL;
 
   /* Arr */
-  ADD_TYPE(TM_Arr_SR_ND) ADD_TYPE(TM_Arr_SR_SO) ADD_TYPE(TM_Arr_SR_EA)
-  ADD_TYPE(TM_Arr_SL_ND) ADD_TYPE(TM_Arr_SL_SO) ADD_TYPE(TM_Arr_SL_EA)
+  ADD_TYPE(TM_Arr_CR_ND) ADD_TYPE(TM_Arr_CR_SO) ADD_TYPE(TM_Arr_CR_EA)
+  ADD_TYPE(TM_Arr_CLR_ND) ADD_TYPE(TM_Arr_CLR_SO) ADD_TYPE(TM_Arr_CLR_EA)
   
   /* ArrV */
-  ADD_TYPE(TM_ArrV_SR_ND) ADD_TYPE(TM_ArrV_SR_SO) ADD_TYPE(TM_ArrV_SR_EA)
-  ADD_TYPE(TM_ArrV_SL_ND) ADD_TYPE(TM_ArrV_SL_SO) ADD_TYPE(TM_ArrV_SL_EA)
+  ADD_TYPE(TM_ArrV_CR_ND) ADD_TYPE(TM_ArrV_CR_SO) ADD_TYPE(TM_ArrV_CR_EA)
+  ADD_TYPE(TM_ArrV_CLR_ND) ADD_TYPE(TM_ArrV_CLR_SO) ADD_TYPE(TM_ArrV_CLR_EA)
 
   /* Gr */
-  ADD_TYPE(TM_Gr_SR_ND) ADD_TYPE(TM_Gr_SR_SO) ADD_TYPE(TM_Gr_SR_EA)
-  ADD_TYPE(TM_Gr_SL_ND) ADD_TYPE(TM_Gr_SL_SO) ADD_TYPE(TM_Gr_SL_EA)
+  ADD_TYPE(TM_Gr_CR_ND) ADD_TYPE(TM_Gr_CR_SO) ADD_TYPE(TM_Gr_CR_EA)
+  ADD_TYPE(TM_Gr_CLR_ND) ADD_TYPE(TM_Gr_CLR_SO) ADD_TYPE(TM_Gr_CLR_EA)
 
   /* Glr */
-  ADD_TYPE(TM_Glr_SR_ND) ADD_TYPE(TM_Glr_SR_SO) ADD_TYPE(TM_Glr_SR_EA)
-  ADD_TYPE(TM_Glr_SL_ND) ADD_TYPE(TM_Glr_SL_SO) ADD_TYPE(TM_Glr_SL_EA)
+  ADD_TYPE(TM_Glr_CR_ND) ADD_TYPE(TM_Glr_CR_SO) ADD_TYPE(TM_Glr_CR_EA)
+  ADD_TYPE(TM_Glr_CLR_ND) ADD_TYPE(TM_Glr_CLR_SO) ADD_TYPE(TM_Glr_CLR_EA)
 
   /* Set */
-  ADD_TYPE(TM_Set_SR_ND) ADD_TYPE(TM_Set_SR_SO) ADD_TYPE(TM_Set_SR_EA)
-  ADD_TYPE(TM_Set_SL_ND) ADD_TYPE(TM_Set_SL_SO) ADD_TYPE(TM_Set_SL_EA)
+  ADD_TYPE(TM_Set_CR_ND) ADD_TYPE(TM_Set_CR_SO) ADD_TYPE(TM_Set_CR_EA)
+  ADD_TYPE(TM_Set_CLR_ND) ADD_TYPE(TM_Set_CLR_SO) ADD_TYPE(TM_Set_CLR_EA)
 
   /* Map */
-  ADD_TYPE(TM_Map_SR_ND) ADD_TYPE(TM_Map_SR_SO) ADD_TYPE(TM_Map_SR_EA)
-  ADD_TYPE(TM_Map_SL_ND) ADD_TYPE(TM_Map_SL_SO) ADD_TYPE(TM_Map_SL_EA)
+  ADD_TYPE(TM_Map_CR_ND) ADD_TYPE(TM_Map_CR_SO) ADD_TYPE(TM_Map_CR_EA)
+  ADD_TYPE(TM_Map_CLR_ND) ADD_TYPE(TM_Map_CLR_SO) ADD_TYPE(TM_Map_CLR_EA)
 
   /* MapK */
-  ADD_TYPE(TM_MapK_SR_ND) ADD_TYPE(TM_MapK_SR_SO) ADD_TYPE(TM_MapK_SR_EA)
-  ADD_TYPE(TM_MapK_SL_ND) ADD_TYPE(TM_MapK_SL_SO) ADD_TYPE(TM_MapK_SL_EA)
+  ADD_TYPE(TM_MapK_CR_ND) ADD_TYPE(TM_MapK_CR_SO) ADD_TYPE(TM_MapK_CR_EA)
+  ADD_TYPE(TM_MapK_CLR_ND) ADD_TYPE(TM_MapK_CLR_SO) ADD_TYPE(TM_MapK_CLR_EA)
 
   /* MapV */
-  ADD_TYPE(TM_MapV_SR_ND) ADD_TYPE(TM_MapV_SR_SO) ADD_TYPE(TM_MapV_SR_EA)
-  ADD_TYPE(TM_MapV_SL_ND) ADD_TYPE(TM_MapV_SL_SO) ADD_TYPE(TM_MapV_SL_EA)
+  ADD_TYPE(TM_MapV_CR_ND) ADD_TYPE(TM_MapV_CR_SO) ADD_TYPE(TM_MapV_CR_EA)
+  ADD_TYPE(TM_MapV_CLR_ND) ADD_TYPE(TM_MapV_CLR_SO) ADD_TYPE(TM_MapV_CLR_EA)
 
   /* ASCII */
-  ADD_TYPE(TM_ASCII_SR_ND) ADD_TYPE(TM_ASCII_SR_SO) ADD_TYPE(TM_ASCII_SR_EA)
-  ADD_TYPE(TM_ASCII_SL_ND) ADD_TYPE(TM_ASCII_SL_SO) ADD_TYPE(TM_ASCII_SL_EA)
+  ADD_TYPE(TM_ASCII_CR_ND) ADD_TYPE(TM_ASCII_CR_SO) ADD_TYPE(TM_ASCII_CR_EA)
+  ADD_TYPE(TM_ASCII_CLR_ND) ADD_TYPE(TM_ASCII_CLR_SO) ADD_TYPE(TM_ASCII_CLR_EA)
 
   /* UTF8 */
-  ADD_TYPE(TM_UTF8_SR_ND) ADD_TYPE(TM_UTF8_SR_SO) ADD_TYPE(TM_UTF8_SR_EA)
-  ADD_TYPE(TM_UTF8_SL_ND) ADD_TYPE(TM_UTF8_SL_SO) ADD_TYPE(TM_UTF8_SL_EA)
-
-  /* BCD */
-  ADD_TYPE(TM_BCD_SR_ND) ADD_TYPE(TM_BCD_SR_SO) ADD_TYPE(TM_BCD_SR_EA)
-  ADD_TYPE(TM_BCD_SL_ND) ADD_TYPE(TM_BCD_SL_SO) ADD_TYPE(TM_BCD_SL_EA)
+  ADD_TYPE(TM_UTF8_CR_ND) ADD_TYPE(TM_UTF8_CR_SO) ADD_TYPE(TM_UTF8_CR_EA)
+  ADD_TYPE(TM_UTF8_CLR_ND) ADD_TYPE(TM_UTF8_CLR_SO) ADD_TYPE(TM_UTF8_CLR_EA)
 
   /* Abstract */
   if (PyType_Ready(&TMA_NaturalNumber·Type) < 0) return NULL;

@@ -1,56 +1,120 @@
-#!/usr/bin/env python3
-import sys
+"""
+TM.py
+Wrapper for the C extension TM_module.
+"""
+import TM_module
 
-try:
-  import TM_module
-except ImportError:
-  print("Error: Import failed. Run 'python3 setup.py build_ext --inplace'")
-  sys.exit(1)
+# -----------------------------------------------------------------------------
+# 1. Arr (Fixed Array)
+# -----------------------------------------------------------------------------
+TM_Arr_CR_ND = TM_module.TM_Arr_CR_ND
+TM_Arr_CR_SO = TM_module.TM_Arr_CR_SO
+TM_Arr_CR_EA = TM_module.TM_Arr_CR_EA
 
-# ==========================================
-# TM Command Language (Explicit Types)
-# ==========================================
+TM_Arr_CLR_ND = TM_module.TM_Arr_CLR_ND
+TM_Arr_CLR_SO = TM_module.TM_Arr_CLR_SO
+TM_Arr_CLR_EA = TM_module.TM_Arr_CLR_EA
 
-# Import all C-defined types into this namespace
-_this_module = sys.modules[__name__]
-for name in dir(TM_module):
-    if name.startswith("TM_") or name.startswith("TMA_"):
-        setattr(_this_module, name, getattr(TM_module, name))
+# -----------------------------------------------------------------------------
+# 2. ArrV (Variable Array / Vector)
+# -----------------------------------------------------------------------------
+TM_ArrV_CR_ND = TM_module.TM_ArrV_CR_ND
+TM_ArrV_CR_SO = TM_module.TM_ArrV_CR_SO
+TM_ArrV_CR_EA = TM_module.TM_ArrV_CR_EA
 
-# ==========================================
-# Defaults (Aliasing)
-# ==========================================
+TM_ArrV_CLR_ND = TM_module.TM_ArrV_CLR_ND
+TM_ArrV_CLR_SO = TM_module.TM_ArrV_CLR_SO
+TM_ArrV_CLR_EA = TM_module.TM_ArrV_CLR_EA
 
-# Pattern: TM_[Container]_[Direction]_[Entanglement]
-# Default Container: Arr
-# Default Entanglement: ND
-# Default Direction: SR
+# -----------------------------------------------------------------------------
+# 3. Gr (Graph Right / Linked List)
+# -----------------------------------------------------------------------------
+TM_Gr_CR_ND = TM_module.TM_Gr_CR_ND
+TM_Gr_CR_SO = TM_module.TM_Gr_CR_SO
+TM_Gr_CR_EA = TM_module.TM_Gr_CR_EA
 
-# --- Global Default ---
-TM = TM_module.TM_Arr_SR_ND
+TM_Gr_CLR_ND = TM_module.TM_Gr_CLR_ND
+TM_Gr_CLR_SO = TM_module.TM_Gr_CLR_SO
+TM_Gr_CLR_EA = TM_module.TM_Gr_CLR_EA
 
-# --- Container Defaults (Dir=SR, Ent=ND) ---
-TM_Arr  = TM_module.TM_Arr_SR_ND
-TM_ArrV = TM_module.TM_ArrV_SR_ND
-TM_Gr   = TM_module.TM_Gr_SR_ND
-TM_Glr  = TM_module.TM_Glr_SR_ND
-TM_Set  = TM_module.TM_Set_SR_ND
-TM_Map  = TM_module.TM_Map_SR_ND
-TM_MapK = TM_module.TM_MapK_SR_ND
-TM_MapV = TM_module.TM_MapV_SR_ND
-TM_ASCII= TM_module.TM_ASCII_SR_ND
-TM_UTF8 = TM_module.TM_UTF8_SR_ND
-TM_BCD  = TM_module.TM_BCD_SR_ND
+# -----------------------------------------------------------------------------
+# 4. Glr (Graph Left Right / Doubly Linked List)
+# -----------------------------------------------------------------------------
+TM_Glr_CR_ND = TM_module.TM_Glr_CR_ND
+TM_Glr_CR_SO = TM_module.TM_Glr_CR_SO
+TM_Glr_CR_EA = TM_module.TM_Glr_CR_EA
 
-# --- Direction Defaults (Cont=Arr, Ent=ND) ---
-TM_SR = TM_module.TM_Arr_SR_ND
-TM_SL = TM_module.TM_Arr_SL_ND
+TM_Glr_CLR_ND = TM_module.TM_Glr_CLR_ND
+TM_Glr_CLR_SO = TM_module.TM_Glr_CLR_SO
+TM_Glr_CLR_EA = TM_module.TM_Glr_CLR_EA
 
-# --- Entanglement Defaults (Cont=Arr, Dir=SR) ---
-TM_ND = TM_module.TM_Arr_SR_ND
-TM_SO = TM_module.TM_Arr_SR_SO
-TM_EA = TM_module.TM_Arr_SR_EA
+# -----------------------------------------------------------------------------
+# 5. Set (Unordered)
+# -----------------------------------------------------------------------------
+TM_Set_CR_ND = TM_module.TM_Set_CR_ND
+TM_Set_CR_SO = TM_module.TM_Set_CR_SO
+TM_Set_CR_EA = TM_module.TM_Set_CR_EA
 
-# --- Common Partials ---
-TM_Arr_SL = TM_module.TM_Arr_SL_ND
-TM_ASCII_SL = TM_module.TM_ASCII_SL_ND
+TM_Set_CLR_ND = TM_module.TM_Set_CLR_ND
+TM_Set_CLR_SO = TM_module.TM_Set_CLR_SO
+TM_Set_CLR_EA = TM_module.TM_Set_CLR_EA
+
+# -----------------------------------------------------------------------------
+# 6. Map (Items)
+# -----------------------------------------------------------------------------
+TM_Map_CR_ND = TM_module.TM_Map_CR_ND
+TM_Map_CR_SO = TM_module.TM_Map_CR_SO
+TM_Map_CR_EA = TM_module.TM_Map_CR_EA
+
+TM_Map_CLR_ND = TM_module.TM_Map_CLR_ND
+TM_Map_CLR_SO = TM_module.TM_Map_CLR_SO
+TM_Map_CLR_EA = TM_module.TM_Map_CLR_EA
+
+# -----------------------------------------------------------------------------
+# 7. MapK (Keys)
+# -----------------------------------------------------------------------------
+TM_MapK_CR_ND = TM_module.TM_MapK_CR_ND
+TM_MapK_CR_SO = TM_module.TM_MapK_CR_SO
+TM_MapK_CR_EA = TM_module.TM_MapK_CR_EA
+
+TM_MapK_CLR_ND = TM_module.TM_MapK_CLR_ND
+TM_MapK_CLR_SO = TM_module.TM_MapK_CLR_SO
+TM_MapK_CLR_EA = TM_module.TM_MapK_CLR_EA
+
+# -----------------------------------------------------------------------------
+# 8. MapV (Values)
+# -----------------------------------------------------------------------------
+TM_MapV_CR_ND = TM_module.TM_MapV_CR_ND
+TM_MapV_CR_SO = TM_module.TM_MapV_CR_SO
+TM_MapV_CR_EA = TM_module.TM_MapV_CR_EA
+
+TM_MapV_CLR_ND = TM_module.TM_MapV_CLR_ND
+TM_MapV_CLR_SO = TM_module.TM_MapV_CLR_SO
+TM_MapV_CLR_EA = TM_module.TM_MapV_CLR_EA
+
+# -----------------------------------------------------------------------------
+# 9. ASCII (String)
+# -----------------------------------------------------------------------------
+TM_ASCII_CR_ND = TM_module.TM_ASCII_CR_ND
+TM_ASCII_CR_SO = TM_module.TM_ASCII_CR_SO
+TM_ASCII_CR_EA = TM_module.TM_ASCII_CR_EA
+
+TM_ASCII_CLR_ND = TM_module.TM_ASCII_CLR_ND
+TM_ASCII_CLR_SO = TM_module.TM_ASCII_CLR_SO
+TM_ASCII_CLR_EA = TM_module.TM_ASCII_CLR_EA
+
+# -----------------------------------------------------------------------------
+# 10. UTF8 (String)
+# -----------------------------------------------------------------------------
+TM_UTF8_CR_ND = TM_module.TM_UTF8_CR_ND
+TM_UTF8_CR_SO = TM_module.TM_UTF8_CR_SO
+TM_UTF8_CR_EA = TM_module.TM_UTF8_CR_EA
+
+TM_UTF8_CLR_ND = TM_module.TM_UTF8_CLR_ND
+TM_UTF8_CLR_SO = TM_module.TM_UTF8_CLR_SO
+TM_UTF8_CLR_EA = TM_module.TM_UTF8_CLR_EA
+
+# -----------------------------------------------------------------------------
+# 11. Abstract
+# -----------------------------------------------------------------------------
+TMA_NaturalNumber = TM_module.TMA_NaturalNumber
