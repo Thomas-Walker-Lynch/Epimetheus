@@ -3,18 +3,13 @@
   Topology: Infinite Line
 */
 
-/* ALLOW CDOT IN IDENTIFIERS */
-#define · _ 
-
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "structmember.h"
 
-/* --- 1. HEAD STRUCT --- */
-
 typedef struct {
   PyObject_HEAD
-  unsigned long long state; /* Variable */
+  unsigned long long state; 
 } TM·Nat·Head;
 
 static int TM·Nat·init(TM·Nat·Head* self, PyObject* args, PyObject* kwds){
@@ -25,8 +20,6 @@ static int TM·Nat·init(TM·Nat·Head* self, PyObject* args, PyObject* kwds){
 static void TM·Nat·dealloc(TM·Nat·Head* self){
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
-
-/* --- 2. PRIMITIVES --- */
 
 static PyObject* TM·Nat·s(TM·Nat·Head* self){ 
   self->state++; 
@@ -60,7 +53,6 @@ static PyObject* TM·Nat·w(TM·Nat·Head* self, PyObject* val){
 }
 
 static PyObject* TM·Nat·qR(TM·Nat·Head* self){ 
-  /* Infinite tape, never at rightmost end */
   Py_RETURN_FALSE; 
 }
 
@@ -80,8 +72,6 @@ static PyObject* TM·Nat·LqnR(TM·Nat·Head* self){
   return PyLong_FromUnsignedLongLong(self->state);
 }
 
-/* --- 3. METHOD TABLE --- */
-
 static PyMethodDef TM·Nat·methods[] = {
   {"s", (PyCFunction)TM·Nat·s, METH_NOARGS, ""},
   {"sn",(PyCFunction)TM·Nat·sn,METH_VARARGS,""},
@@ -95,8 +85,6 @@ static PyMethodDef TM·Nat·methods[] = {
   {"LsR",(PyCFunction)TM·Nat·LsR,METH_NOARGS, ""},
   {NULL}
 };
-
-/* --- 4. TYPE DEFINITION --- */
 
 static PyTypeObject TMA_NaturalNumber·Type = {
   PyVarObject_HEAD_INIT(NULL, 0)

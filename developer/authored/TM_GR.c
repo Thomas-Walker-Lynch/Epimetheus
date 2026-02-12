@@ -4,19 +4,14 @@
   Backing: Generic Python Object with "right" and "left" attributes.
 */
 
-/* ALLOW CDOT IN IDENTIFIERS */
-#define · _ 
-
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "structmember.h"
 
-/* --- 1. HEAD STRUCT (Graph) --- */
-
 typedef struct {
   PyObject_HEAD
-  PyObject* leftmost_node; /* Variable: The anchor/start of the tape */
-  PyObject* head_node;     /* Variable: The current cell/node */
+  PyObject* leftmost_node; 
+  PyObject* head_node;     
 } TM·Gr·Head;
 
 static void TM·Gr·dealloc(TM·Gr·Head* self){
@@ -43,35 +38,29 @@ static int TM·Gr·init(TM·Gr·Head* self, PyObject* args, PyObject* kwds){
   return 0;
 }
 
-/* --- 2. PRIMITIVES --- */
+/* --- PRIMITIVES --- */
 
 static PyObject* TM·Gr·s(TM·Gr·Head* self){ 
-  /* Spatial: Move Right */
   PyObject* right = PyObject_GetAttrString(self->head_node, "right");
   if (!right) return NULL; 
-  
   if (right == Py_None) {
       Py_DECREF(right);
       PyErr_SetString(PyExc_RuntimeError, "Stepped off tape (right is None).");
       return NULL;
   }
-  
   Py_DECREF(self->head_node);
   self->head_node = right;
   Py_RETURN_NONE; 
 }
 
 static PyObject* TM·Gr·Ls(TM·Gr·Head* self){ 
-  /* Spatial: Move Left */
   PyObject* left = PyObject_GetAttrString(self->head_node, "left");
   if (!left) return NULL;
-  
   if (left == Py_None) {
       Py_DECREF(left);
       PyErr_SetString(PyExc_RuntimeError, "Stepped off tape (left is None).");
       return NULL;
   }
-  
   Py_DECREF(self->head_node);
   self->head_node = left;
   Py_RETURN_NONE; 
@@ -92,19 +81,16 @@ static PyObject* TM·Gr·e(TM·Gr·Head* self){
 }
 
 static PyObject* TM·Gr·r(TM·Gr·Head* self){ 
-  /* In Graph topology, the Node IS the cell. Return the node. */
   Py_INCREF(self->head_node);
   return self->head_node;
 }
 
 static PyObject* TM·Gr·w(TM·Gr·Head* self, PyObject* val){
-  /* Write payload to 'val' attribute of the node */
   if (PyObject_SetAttrString(self->head_node, "val", val) < 0) return NULL;
   Py_RETURN_NONE;
 }
 
 static PyObject* TM·Gr·qR(TM·Gr·Head* self){ 
-  /* Is Rightmost? Check if .right is None/Missing */
   PyObject* right = PyObject_GetAttrString(self->head_node, "right");
   if (!right || right == Py_None) {
       Py_XDECREF(right);
@@ -115,7 +101,6 @@ static PyObject* TM·Gr·qR(TM·Gr·Head* self){
 }
 
 static PyObject* TM·Gr·LqR(TM·Gr·Head* self){ 
-  /* Is Leftmost? Check if .left is None/Missing */
   PyObject* left = PyObject_GetAttrString(self->head_node, "left");
   if (!left || left == Py_None) {
       Py_XDECREF(left);
@@ -126,9 +111,32 @@ static PyObject* TM·Gr·LqR(TM·Gr·Head* self){
 }
 
 static PyObject* TM·Gr·LsR(TM·Gr·Head* self){ 
-  /* Cue to Leftmost */
   Py_DECREF(self->head_node);
   self->head_node = self->leftmost_node;
   Py_INCREF(self->head_node);
   Py_RETURN_NONE; 
 }
+
+/* --- METHOD TABLES --- */
+
+static PyMethodDef Table·Gr·CR·ND[] = {
+  {"s", (PyCFunction)TM·Gr·s, METH_NOARGS, ""},
+  {"e", (PyCFunction)TM·Gr·e, METH_NOARGS, ""},
+  {"r", (PyCFunction)TM·Gr·r, METH_NOARGS, ""},
+  {"w", (PyCFunction)TM·Gr·w, METH_O,      ""},
+  {"qR",(PyCFunction)TM·Gr·qR,METH_NOARGS, ""},
+  {"LsR",(PyCFunction)TM·Gr·LsR,METH_NOARGS,""},
+  {NULL}
+};
+
+static PyMethodDef Table·Gr·CLR·ND[] = {
+  {"s", (PyCFunction)TM·Gr·s, METH_NOARGS, ""},
+  {"e", (PyCFunction)TM·Gr·e, METH_NOARGS, ""},
+  {"Ls",(PyCFunction)TM·Gr·Ls,METH_NOARGS, ""},
+  {"r", (PyCFunction)TM·Gr·r, METH_NOARGS, ""},
+  {"w", (PyCFunction)TM·Gr·w, METH_O,      ""},
+  {"qR",(PyCFunction)TM·Gr·qR,METH_NOARGS, ""},
+  {"LqR",(PyCFunction)TM·Gr·LqR,METH_NOARGS, ""},
+  {"LsR",(PyCFunction)TM·Gr·LsR,METH_NOARGS,""},
+  {NULL}
+};

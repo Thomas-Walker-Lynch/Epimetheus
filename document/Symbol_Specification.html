@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Symbol Specification</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+  
+  <script src="style/body_visibility_hidden.js"></script>
+  <script>
+    window.StyleRT.body_visibility_hidden();
+  </script>
+</head>
+<body>
+
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-02-12" 
+        title="Symbol Specification">
+      </RT-title>
+
+      <h1> <RT-code>SymbolSpace</RT-code> </h1>
+      <p>
+        <RT-code>SymbolSpace</RT-code> has:
+        <ol>
+          <li>Symbol subclass</li>
+          <li>Factory subclass</li>
+          <li>Context subclass</li>
+          <li>a <RT-code>null<RT-code> symbol</li>
+        </ol>
+      </p>
+
+      <h2>Symbol</h2>
+
+      <p>
+        A Symbol instance wraps an integer known as its <RT-term>identity</RT-term>.
+      </p>
+
+      <p>
+        Symbols are made by the Factory `make` method.
+      </p>
+
+      <p>
+        When a Symbol instance is garbage collected, it contacts the Symbol.Factory, so that its <RT-term>identity</RT-term> can be added to the Symbol.Factory's free list.
+      <p>
+
+      <h2><RT-code>Factory</RT-code></h2>
+
+      <p>The <RT-code>Factory</RT-code> has:
+        <ol>
+          <li><RT-code>counter</RT-code></li>
+          <li><RT-code>free_list</RT-code></li>
+        </ol>
+      </p>
+
+      <p>
+        Factory method calls are transactional.
+      </p>
+
+      <p>
+        The <RT-code>counter</RT-code> value at any time between transactions is the highest count symbol identity that has been issued.
+      </p>
+
+      <p>
+        The lowest counter value is zero. At time of <RT-code>Factory</RT-code> initialization the zero value is given as the identity for the <RT-code>SymbolSpace.null</RT-code> symbol. This initialization strategy assures the counter value remains the highest issued symbol identity even immediately after initialization.
+      </p>
+
+      <p>
+        To add to the free list, first check the current <RT-code>counter</RT-code> value,   If the count matches the identity of the newly freed Symbol instance,  decremented the count.  If the Counter's post decrement value is on the free list,  it is removed from the free list and the count is decremented again, this repeats until the new decement count is not found on the free list.  It is an error to attempt to free the null symbol, that of 0.
+      </p>
+
+      <h2>Context</h2>
+      <p>
+        Context is a map keyed on a symbol list.  Such a symbol list is called a 'symbol context'.  Each key maps to a <RT-code>Factory</RT-code>.
+      </p>
+
+      <p>
+        A program creates a context by calling <RT-code>make</RT-code> while giving it a <RT-code>Symbol</RT-code> instance list. That list, in the order the symbols are given, is said to be a <RT-term>symbol context</RT-term>. The <RT-code>make</RT-code> routine returns a <RT-code>Factory</RT-code>. Thus the returned <RT-code>Factory</RT-code> instance is a <RT-term>context specific factory</RT-term>.
+        </p>
+
+      <p>The program should never give <RT-code>make</RT-code> a <RT-term>symbol context</RT-term> that is already a key in the table. <RT-code>make</RT-code> can be guarded using <RT-code>read</RT-code>
+      </p>
+
+      <p>The <RT-code>read</RT-code> function is given a symbol context and returns the       corresponding <RT-term>context specific factory</RT-term>, or none, if there isn't one.
+      </p>
+
+      <p>A symbol that is part of <RT-term>symbol context</RT-term> will never be garbage
+      collected.  Hence, a <RT-term>symbol context</RT-term> remains in the table even when it is not being used.
+      </p>
+
+      <p>A <RT-term>symbol context</RT-term> is deleted from the table by calling the <RT-code>delete</RT-code> interface function and giving it the <RT-term>symbol context</RT-term> to be deleted.</p>
+
+
+      <h1>Usage</h1>
+
+      <p>A programmer first creates a <RT-code>SymbolSpace</RT-code>, then in normal use, the programmer will create a top level symbol to serve as a namespace.  The programmer will then use the resulting <RT-term>context specific factory</RT-term> to create symbols within that namespace
+      </p>
+
+  <script src="style/style_orchestrator.js"></script>
+  <script>
+   window.StyleRT.style_orchestrator();
+  </script>
+
+</body>
+</html>

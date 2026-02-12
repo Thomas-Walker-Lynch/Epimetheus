@@ -4,21 +4,18 @@
   Backing: PyListObject
 */
 
-/* ALLOW CDOT IN IDENTIFIERS */
-#define · _ 
-
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "structmember.h"
 
-/* --- 1. HEAD STRUCT (Linear Array) --- */
+/* --- 1. HEAD STRUCT --- */
 
 typedef struct {
   PyObject_HEAD
-  PyObject* tape_obj;       /* Variable: The Container */
-  PyObject** head_ptr;      /* Variable: Pointer to Current Cell */
-  PyObject** leftmost_ptr;  /* Variable: Pointer to Leftmost Cell */
-  PyObject** right_sentinel;/* Variable: Pointer to Right Sentinel */
+  PyObject* tape_obj;       /* Variable: Container */
+  PyObject** head_ptr;      /* Variable: Current Cell */
+  PyObject** leftmost_ptr;  /* Variable: Left Bound */
+  PyObject** right_sentinel;/* Variable: Right Bound */
 } TM·Arr·Head;
 
 static void TM·Arr·dealloc(TM·Arr·Head* self){
@@ -178,7 +175,6 @@ static PyObject* TM·Arr·LqnR(TM·Arr·Head* self){
 
 static PyObject* TM·Arr·dR(TM·Arr·Head* self){
   TM·Arr·lazysync(self);
-  /* Guard: Must have a left neighbor to step back to. */
   if (self->head_ptr <= self->leftmost_ptr) {
       PyErr_SetString(PyExc_RuntimeError, "Invariant Violation: Cannot dR from leftmost cell.");
       return NULL;
@@ -195,7 +191,6 @@ static PyObject* TM·Arr·dR(TM·Arr·Head* self){
 
 static PyObject* TM·Arr·LdR(TM·Arr·Head* self){
   TM·Arr·lazysync(self);
-  /* Guard: Must have a right neighbor to reset to. */
   if (self->head_ptr >= self->right_sentinel - 1) {
       PyErr_SetString(PyExc_RuntimeError, "Invariant Violation: Cannot LdR from rightmost cell.");
       return NULL;
@@ -264,3 +259,73 @@ static PyObject* TM·Arr·LaR(TM·Arr·Head* self, PyObject* val){
   TM·Arr·sync(self);
   Py_RETURN_NONE;
 }
+
+/* --- 8. METHOD TABLES --- */
+
+static PyMethodDef Table·Arr·CR·ND[] = {
+  {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
+  {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
+  {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
+  {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
+  {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
+  {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Arr·qnR,METH_NOARGS,""},
+  {"LqnR",(PyCFunction)TM·Arr·LqnR,METH_NOARGS,""},
+  {"LsR",(PyCFunction)TM·Arr·LsR,METH_NOARGS,""},
+  {NULL}
+};
+
+static PyMethodDef Table·Arr·CLR·ND[] = {
+  {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
+  {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
+  {"e", (PyCFunction)TM·Arr·e, METH_NOARGS, ""},
+  {"Ls",(PyCFunction)TM·Arr·Ls,METH_NOARGS, ""},
+  {"Lsn",(PyCFunction)TM·Arr·Lsn,METH_VARARGS,""},
+  {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
+  {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
+  {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
+  {"LqR",(PyCFunction)TM·Arr·LqR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Arr·qnR,METH_NOARGS,""},
+  {"LqnR",(PyCFunction)TM·Arr·LqnR,METH_NOARGS,""},
+  {"sR",(PyCFunction)TM·Arr·sR,METH_NOARGS, ""},
+  {"LsR",(PyCFunction)TM·Arr·LsR,METH_NOARGS,""},
+  {NULL}
+};
+
+static PyMethodDef Table·Arr·CR·SO[] = {
+  {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
+  {"sn",(PyCFunction)TM·Arr·sn,METH_VARARGS,""},
+  {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
+  {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
+  {"dR",(PyCFunction)TM·Arr·dR,METH_NOARGS, ""},
+  {"esd",(PyCFunction)TM·Arr·esd,METH_NOARGS,""},
+  {"esa",(PyCFunction)TM·Arr·esa,METH_O,     ""},
+  {"aR",(PyCFunction)TM·Arr·aR,METH_O,       ""},
+  {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Arr·qnR,METH_NOARGS,""},
+  {"LqnR",(PyCFunction)TM·Arr·LqnR,METH_NOARGS,""},
+  {"LsR",(PyCFunction)TM·Arr·LsR,METH_NOARGS,""},
+  {NULL}
+};
+
+static PyMethodDef Table·Arr·CLR·SO[] = {
+  {"s", (PyCFunction)TM·Arr·s, METH_NOARGS, ""},
+  {"Ls",(PyCFunction)TM·Arr·Ls,METH_NOARGS, ""},
+  {"r", (PyCFunction)TM·Arr·r, METH_NOARGS, ""},
+  {"w", (PyCFunction)TM·Arr·w, METH_O,      ""},
+  {"dR",(PyCFunction)TM·Arr·dR,METH_NOARGS, ""},
+  {"LdR",(PyCFunction)TM·Arr·LdR,METH_NOARGS,""},
+  {"esd",(PyCFunction)TM·Arr·esd,METH_NOARGS,""},
+  {"eLsd",(PyCFunction)TM·Arr·eLsd,METH_NOARGS,""},
+  {"esa",(PyCFunction)TM·Arr·esa,METH_O,     ""},
+  {"eLsa",(PyCFunction)TM·Arr·eLsa,METH_O,   ""},
+  {"aR",(PyCFunction)TM·Arr·aR,METH_O,       ""},
+  {"LaR",(PyCFunction)TM·Arr·LaR,METH_O,     ""},
+  {"qR",(PyCFunction)TM·Arr·qR,METH_NOARGS, ""},
+  {"LqR",(PyCFunction)TM·Arr·LqR,METH_NOARGS, ""},
+  {"qnR",(PyCFunction)TM·Arr·qnR,METH_NOARGS,""},
+  {"LqnR",(PyCFunction)TM·Arr·LqnR,METH_NOARGS,""},
+  {"sR",(PyCFunction)TM·Arr·sR,METH_NOARGS, ""},
+  {"LsR",(PyCFunction)TM·Arr·LsR,METH_NOARGS,""},
+  {NULL}
+};
