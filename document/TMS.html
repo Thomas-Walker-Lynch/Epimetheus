@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Tape Machine with Status</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+    
+    <script src="style/body_visibility_hidden.js"></script>
+    <script>
+      window.StyleRT.body_visibility_hidden();
+    </script>
+  </head>
+  <body>
+    <RT-article>
+      <RT-title 
+        author="Thomas Walker Lynch" 
+        date="2026-02-13" 
+        title="Tape Machine with Status (TMS)">
+      </RT-title>
+
+      <RT-TOC level="1"></RT-TOC>
+
+      <h1>Introduction</h1>
+
+      <p>
+        The <RT-term>Tape Machine with Status</RT-term> (TMS) is a <RT-term>Second Order Machine</RT-term>. It wraps a standard <RT-term>First Order</RT-term> Tape Machine (TM) to provide state management and advanced lifecycle features.
+      </p>
+
+      <p>
+        While a First Order TM must always reside on a valid cell (the <RT-term>Head</RT-term> must be at a valid address), the TMS allows the machine to be:
+        <ul>
+          <li><RT-code>Empty</RT-code> (containing no data)</li>
+          <li><RT-code>Parked</RT-code> (the head is conceptually "off tape")</li>
+          <li><RT-code>Active</RT-code> (functioning as a standard TM)</li>
+        </ul>
+      </p>
+
+      <p>
+        The TMS implementation uses the <RT-term>State Pattern</RT-term> (vtable swapping) to ensure that the <RT-code>Active</RT-code> state incurs zero overhead. Method calls in the active state are directly bound to the underlying First Order TM's methods.
+      </p>
+
+      <h1>States</h1>
+
+      <p>
+        The TMS manages five distinct states to handle lifecycle, late binding, and memory optimization.
+      </p>
+
+      <h2>1. EmptyTyped</h2>
+      <p>
+        The machine is logically empty and has no underlying TM instance allocated. It holds a reference to a TM <RT-term>class type</RT-term>. This supports <RT-term>Late Binding</RT-term>, allowing the TMS to be created before data is available.
+      </p>
+      <p>
+        <strong>Transitions:</strong>
+        <ul>
+          <li><RT-code>append(v)</RT-code> &rarr; Instantiates the TM with value <RT-code>v</RT-code>, transitions to <RT-code>Singleton</RT-code>.</li>
+        </ul>
+      </p>
+
+      <h2>2. EmptyStashed</h2>
+      <p>
+        The machine is logically empty, but the underlying TM instance is preserved with exactly one "zombie" cell. This is a performance optimization to avoid deallocation and reallocation costs when a machine is cleared and immediately reused.
+      </p>
+      <p>
+        <strong>Transitions:</strong>
+        <ul>
+          <li><RT-code>append(v)</RT-code> &rarr; Overwrites the zombie cell with <RT-code>v</RT-code>, transitions to <RT-code>Singleton</RT-code>.</li>
+          <li><RT-code>dealloc()</RT-code> &rarr; Destroys the TM instance, transitions to <RT-code>EmptyTyped</RT-code>.</li>
+        </ul>
+      </p>
+
+      <h2>3. Parked</h2>
+      <p>
+        The underlying TM exists, but the TMS Head is conceptually located "outside" the tape. This state is <RT-term>projective</RT-term>, meaning it connects to both ends of the tape.
+      </p>
+      <p>
+        <strong>Transitions:</strong>
+        <ul>
+          <li><RT-code>s()</RT-code> (Step Right) &rarr; Enters the tape at the <RT-term>Leftmost</RT-term> cell. Transitions to <RT-code>Singleton</RT-code> or <RT-code>Active</RT-code>.</li>
+          <li><RT-code>Ls()</RT-code> (Step Left) &rarr; Enters the tape at the <RT-term>Rightmost</RT-term> cell. Transitions to <RT-code>Singleton</RT-code> or <RT-code>Active</RT-code>.</li>
+          <li><RT-code>d()</RT-code> &rarr; Deletes the "right neighbor" (the Leftmost cell). Logic handles degradation to Empty or Singleton.</li>
+        </ul>
+      </p>
+
+      <h2>4. Singleton</h2>
+      <p>
+        The underlying TM has exactly one cell. The Head is at Address 0. In this state, the underlying TM reports both <RT-code>Lq</RT-code> (Left Query) and <RT-code>qR</RT-code> (Query Right) as true.
+      </p>
+      <p>
+        <strong>Transitions:</strong>
+        <ul>
+          <li><RT-code>Ls()</RT-code> &rarr; Transitions to <RT-code>Parked</RT-code> (exits left).</li>
+          <li><RT-code>s()</RT-code> &rarr; Transitions to <RT-code>Active</RT-code> (extends right) or raises error if bounded.</li>
+          <li><RT-code>d()</RT-code> &rarr; Does not physically delete the cell. Transitions to <RT-code>EmptyStashed</RT-code> (preserving the zombie cell).</li>
+        </ul>
+      </p>
+
+      <h2>5. Active</h2>
+      <p>
+        The underlying TM has more than one cell. Methods are <RT-term>directly bound</RT-term> to the underlying TM for maximum performance.
+      </p>
+      <p>
+        <strong>Transitions:</strong>
+        <ul>
+          <li><RT-code>Ls()</RT-code> &rarr; If <RT-code>Lq</RT-code> is true (at Leftmost), transitions to <RT-code>Parked</RT-code>. Otherwise, steps left.</li>
+          <li><RT-code>d()</RT-code> &rarr; If the size degrades to 1, transitions to <RT-code>Singleton</RT-code>.</li>
+        </ul>
+      </p>
+
+      <h1>Interface</h1>
+
+      <h2>Navigation</h2>
+      <p>
+        <RT-code>s()</RT-code>: Step Right.
+        <ul>
+          <li>In <RT-code>Parked</RT-code>: Lands on <strong>Leftmost</strong> cell.</li>
+          <li>In <RT-code>Active</RT-code>: Steps right (guarded by <RT-code>qR</RT-code>).</li>
+        </ul>
+      </p>
+      <p>
+        <RT-code>Ls()</RT-code>: Step Left.
+        <ul>
+          <li>In <RT-code>Parked</RT-code>: Lands on <strong>Rightmost</strong> cell.</li>
+          <li>In <RT-code>Active</RT-code>: Steps left. If at Leftmost, exits to <RT-code>Parked</RT-code>.</li>
+        </ul>
+      </p>
+      <p>
+        <RT-code>park()</RT-code>: Explicitly moves the machine to the <RT-code>Parked</RT-code> state and cues the underlying TM to the leftmost cell.
+      </p>
+
+      <h2>I/O</h2>
+      <p>
+        <RT-code>r()</RT-code> and <RT-code>w(val)</RT-code>: Read and Write operations are passed directly to the underlying TM. These are valid only in <RT-code>Active</RT-code> or <RT-code>Singleton</RT-code> states.
+      </p>
+
+      <h2>Lifecycle</h2>
+      <p>
+        <RT-code>append(val)</RT-code>: Adds data to the end of the tape. Handles the transition from Empty states to Singleton.
+      </p>
+      <p>
+        <RT-code>d()</RT-code>: Delete. Removes the current cell.
+        <ul>
+          <li>In <RT-code>Active</RT-code>: Removes current cell.</li>
+          <li>In <RT-code>Parked</RT-code>: Removes the Leftmost cell.</li>
+        </ul>
+      </p>
+      <p>
+        <RT-code>dealloc()</RT-code>: Forces the release of the underlying TM instance, returning the TMS to the <RT-code>EmptyTyped</RT-code> state.
+      </p>
+
+    </RT-article>
+  </body>
+</html>
+
+  <script src="style/style_orchestrator.js"></script>
+  <script>
+   window.StyleRT.style_orchestrator();
+  </script>
+
+</body>
+</html>
